@@ -40,6 +40,8 @@ def get_admin_dashboard_stats():
     # Recent activity feeds
     recent_credentials = Credential.query.order_by(Credential.created_at.desc()).limit(5).all()
     recent_attempts = Attempt.query.order_by(Attempt.started_at.desc()).limit(5).all()
+    recent_candidates = User.query.filter_by(role='CANDIDATE').order_by(User.created_at.desc()).limit(5).all()
+    recent_results = Result.query.order_by(Result.created_at.desc()).limit(5).all()
 
     return {
         'total_candidates': total_candidates,
@@ -52,5 +54,7 @@ def get_admin_dashboard_stats():
         'active_assessments': active_assessments,
         'expired_credentials': expired_credentials,
         'recent_credentials': recent_credentials,
-        'recent_attempts': recent_attempts
+        'recent_attempts': recent_attempts,
+        'recent_candidates': recent_candidates,
+        'recent_results': recent_results
     }

@@ -5,70 +5,67 @@
 {% block admin_content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
   <div>
-    <h3 class="fw-bold text-white mb-1">Examination Results</h3>
-    <p class="text-muted small mb-0">Scored candidate assessment attempts, objective MCQ marks, and pass/fail determinations.</p>
+    <h3 class="fw-bold mb-1" style="color: var(--text-main);">Examination Results</h3>
+    <p class="text-muted small mb-0">Scored candidate assessment attempts, category marks, and pass/fail determinations.</p>
   </div>
 </div>
 
-<div class="card-dark">
+<div class="card-dark p-0 overflow-hidden">
   <div class="table-responsive">
-    <table class="table-custom">
+    <table class="table-custom mb-0">
       <thead>
         <tr>
-          <th>Candidate</th>
-          <th>User ID</th>
+          <th>Candidate Name</th>
           <th>Assessment</th>
-          <th>Questions</th>
-          <th>Score</th>
-          <th>Percentage</th>
-          <th>Pass Mark</th>
-          <th>Verdict</th>
-          <th>Submitted At (UTC)</th>
+          <th class="text-center">Coding Score / 60</th>
+          <th class="text-center">Aptitude Score / 20</th>
+          <th class="text-center">MCQ Score / 20</th>
+          <th class="text-center">Total Score / 100</th>
+          <th class="text-center">Result</th>
+          <th class="text-end">Submission Date</th>
         </tr>
       </thead>
       <tbody>
         {% for res in results %}
         <tr>
           <td>
-            <div class="fw-bold text-white">{{ res.candidate.full_name }}</div>
-            <div class="text-dim small">{{ res.candidate.email }}</div>
+            <div class="fw-bold" style="color: var(--text-main);">{{ res.candidate.full_name }}</div>
+            <div class="text-muted small">{{ res.candidate.email }} &bull; <code class="text-primary">{{ res.candidate.user_id }}</code></div>
           </td>
           <td>
-            <code class="text-info fw-bold">{{ res.candidate.user_id }}</code>
+            <span class="badge bg-light text-secondary border font-monospace">{{ res.assessment.code }}</span>
           </td>
-          <td>
-            <span class="badge bg-dark border border-secondary text-primary font-monospace">{{ res.assessment.code }}</span>
+          <td class="text-center font-monospace fw-semibold" style="color: var(--text-main);">
+            {{ "%.1f"|format(res.coding_score) }} <span class="text-muted small">/ 60</span>
           </td>
-          <td>
-            <span class="text-white">{{ res.answered_questions }} / {{ res.total_questions }}</span>
-            <small class="text-dim d-block">({{ res.correct_answers }} correct)</small>
+          <td class="text-center font-monospace fw-semibold" style="color: var(--text-main);">
+            {{ "%.1f"|format(res.aptitude_score) }} <span class="text-muted small">/ 20</span>
           </td>
-          <td>
-            <span class="fw-bold text-white">{{ res.score }}</span>
-            <span class="text-dim small">/ {{ res.max_score }}</span>
+          <td class="text-center font-monospace fw-semibold" style="color: var(--text-main);">
+            {{ "%.1f"|format(res.mcq_score) }} <span class="text-muted small">/ 20</span>
           </td>
-          <td>
-            <span class="fw-bold fs-6 {{ 'text-success' if res.passed else 'text-danger' }}">
-              {{ res.percentage }}%
-            </span>
+          <td class="text-center font-monospace fw-bold" style="color: var(--text-main);">
+            {{ "%.1f"|format(res.score) }} <span class="text-muted small">/ 100</span>
+            <div class="small text-muted">({{ res.percentage }}%)</div>
           </td>
-          <td class="text-dim small">{{ res.assessment.pass_percentage }}%</td>
-          <td>
+          <td class="text-center">
             {% if res.passed %}
-              <span class="badge bg-success-subtle text-success border border-success border-opacity-25 px-2 py-1">
-                <i class="bi bi-check-circle-fill me-1"></i>PASSED
+              <span class="badge-custom badge-active">
+                <i class="bi bi-check-circle-fill me-1"></i>PASS
               </span>
             {% else %}
-              <span class="badge bg-danger-subtle text-danger border border-danger border-opacity-25 px-2 py-1">
-                <i class="bi bi-x-circle-fill me-1"></i>FAILED
+              <span class="badge-custom badge-danger">
+                <i class="bi bi-x-circle-fill me-1"></i>FAIL
               </span>
             {% endif %}
           </td>
-          <td class="text-dim small">{{ res.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+          <td class="text-end text-muted small">
+            {{ res.created_at.strftime('%Y-%m-%d %H:%M') }}
+          </td>
         </tr>
         {% else %}
         <tr>
-          <td colspan="9" class="text-center text-dim py-5">
+          <td colspan="8" class="text-center text-muted py-5">
             <i class="bi bi-clipboard2-data fs-1 d-block mb-2"></i>
             No candidate results submitted yet. Results appear immediately after exam submission.
           </td>

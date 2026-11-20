@@ -8,10 +8,10 @@
   <div class="col-lg-8">
     <div class="card-dark mb-4">
       <!-- Session Banner -->
-      <div class="d-flex justify-content-between align-items-center border-bottom border-secondary border-opacity-50 pb-3 mb-4">
+      <div class="d-flex justify-content-between align-items-center border-bottom pb-3 mb-4" style="border-color: var(--border-color) !important;">
         <div>
-          <span class="badge bg-dark border border-secondary text-primary font-monospace">{{ assessment.code }}</span>
-          <h4 class="fw-bold text-white mb-0 mt-1">{{ assessment.title }}</h4>
+          <span class="badge bg-light text-secondary border font-monospace">{{ assessment.code }}</span>
+          <h4 class="fw-bold mb-0 mt-1" style="color: var(--text-main);">{{ assessment.title }}</h4>
         </div>
         <div id="autosaveStatus" class="small">
           <span class="text-success"><i class="bi bi-check2-circle me-1"></i>Autosave Active</span>
@@ -21,23 +21,23 @@
       <!-- Questions List (MCQs) -->
       {% if questions %}
         {% for q in questions %}
-        <div class="p-3 mb-4 rounded bg-dark border border-secondary border-opacity-35" id="question-card-{{ q.id }}">
+        <div class="p-4 mb-4 rounded border" style="border-color: var(--border-color) !important; background-color: #FFFFFF;" id="question-card-{{ q.id }}">
           <div class="d-flex justify-content-between align-items-start mb-3">
             <span class="badge bg-primary text-white">Question {{ q.index }} of {{ questions|length }}</span>
             <div class="d-flex gap-2 align-items-center">
-              <span class="badge bg-dark border border-secondary text-dim">{{ q.category }}</span>
-              <span class="badge bg-dark border border-secondary text-dim">{{ q.points }} pt{{ 's' if q.points > 1 else '' }}</span>
+              <span class="badge bg-light text-secondary border">{{ q.category }}</span>
+              <span class="badge bg-light text-secondary border">{{ q.points }} pt{{ 's' if q.points > 1 else '' }}</span>
             </div>
           </div>
 
-          <div class="text-white fs-6 mb-3 fw-medium" style="line-height: 1.6;">
+          <div class="fs-6 mb-3 fw-medium" style="color: var(--text-main); line-height: 1.6;">
             {{ q.text }}
           </div>
 
           <!-- Options -->
           <div class="d-flex flex-column gap-2 mb-2">
             {% for opt in q.options %}
-            <label class="p-2 px-3 rounded border border-secondary border-opacity-25 d-flex align-items-center gap-3 bg-black bg-opacity-25" style="cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='rgba(45,59,85,0.25)'">
+            <label class="p-3 rounded border d-flex align-items-center gap-3 option-label-clean" style="cursor: pointer; transition: all 0.15s; background-color: #F8FAFC; border-color: var(--border-color) !important;">
               <input 
                 type="radio" 
                 name="question_{{ q.id }}" 
@@ -46,7 +46,7 @@
                 {% if q.selected_option == opt.id %}checked{% endif %}
                 onchange="autosaveAnswer({{ q.id }}, '{{ opt.id }}', '{{ csrf_token() }}')">
               <span class="text-primary fw-bold font-monospace" style="width: 20px;">{{ opt.id }}</span>
-              <span class="text-white small">{{ opt.text }}</span>
+              <span class="small" style="color: var(--text-main);">{{ opt.text }}</span>
             </label>
             {% endfor %}
           </div>
@@ -54,7 +54,7 @@
         {% endfor %}
 
       {% else %}
-        <div class="text-center py-5 text-dim">
+        <div class="text-center py-5 text-muted">
           <i class="bi bi-journal-text fs-1 d-block mb-2"></i>
           No questions are currently staged for this assessment.
         </div>
@@ -67,8 +67,8 @@
     <!-- Server Timer Countdown -->
     <div class="card-dark mb-4 sticky-top" style="top: 80px;">
       <div class="d-flex align-items-center justify-content-between mb-2">
-        <span class="text-dim text-uppercase fw-bold small"><i class="bi bi-clock-history me-1 text-primary"></i>Server Timer</span>
-        <span class="badge bg-danger-subtle text-danger border border-danger border-opacity-25">Enforced</span>
+        <span class="text-muted text-uppercase fw-bold small"><i class="bi bi-clock-history me-1 text-primary"></i>Server Timer</span>
+        <span class="badge-custom badge-danger">Enforced</span>
       </div>
 
       <div class="countdown-box mb-3 py-2">
@@ -78,11 +78,11 @@
           data-seconds-remaining="{{ seconds_left }}">
           --:--
         </div>
-        <small class="text-dim">Time Remaining in Session</small>
+        <small class="text-muted">Time Remaining in Session</small>
       </div>
 
       <!-- Question Navigation Palette -->
-      <h6 class="text-white fw-bold small mb-2">Question Navigation</h6>
+      <h6 class="fw-bold small mb-2" style="color: var(--text-main);">Question Navigation</h6>
       <div class="d-flex flex-wrap gap-2 mb-4">
         {% for q in questions %}
           <a 

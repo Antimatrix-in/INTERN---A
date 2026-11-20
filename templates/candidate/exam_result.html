@@ -9,14 +9,14 @@
       <div class="mb-3">
         {% if result and result.passed %}
           <div class="text-success fs-1 mb-2"><i class="bi bi-patch-check-fill" style="font-size: 3.5rem;"></i></div>
-          <h3 class="fw-bold text-white">Assessment Completed</h3>
-          <span class="badge bg-success-subtle text-success border border-success border-opacity-25 px-3 py-2 fs-6">
+          <h3 class="fw-bold" style="color: var(--text-main);">Assessment Completed</h3>
+          <span class="badge-custom badge-active px-3 py-2 fs-6">
             VERDICT: PASSED
           </span>
         {% else %}
           <div class="text-info fs-1 mb-2"><i class="bi bi-clipboard2-check-fill" style="font-size: 3.5rem;"></i></div>
-          <h3 class="fw-bold text-white">Assessment Completed</h3>
-          <span class="badge bg-secondary-subtle text-light border border-secondary px-3 py-2 fs-6">
+          <h3 class="fw-bold" style="color: var(--text-main);">Assessment Completed</h3>
+          <span class="badge-custom badge-info px-3 py-2 fs-6">
             STATUS: SUBMITTED
           </span>
         {% endif %}
@@ -27,30 +27,30 @@
       </p>
 
       {% if result %}
-      <div class="row g-3 p-3 bg-dark rounded border border-secondary border-opacity-25 mb-4 text-start">
+      <div class="row g-3 p-3 bg-light rounded border mb-4 text-start" style="border-color: var(--border-color) !important;">
         <div class="col-sm-4 text-center">
-          <span class="text-dim small d-block">Questions Answered</span>
-          <span class="fw-bold text-white fs-5">{{ result.answered_questions }} / {{ result.total_questions }}</span>
+          <span class="text-muted small d-block">Questions Answered</span>
+          <span class="fw-bold fs-5" style="color: var(--text-main);">{{ result.answered_questions }} / {{ result.total_questions }}</span>
         </div>
         <div class="col-sm-4 text-center">
-          <span class="text-dim small d-block">Score Achieved</span>
-          <span class="fw-bold text-white fs-5">{{ result.score }} / {{ result.max_score }}</span>
+          <span class="text-muted small d-block">Score Achieved</span>
+          <span class="fw-bold fs-5" style="color: var(--text-main);">{{ result.score }} / {{ result.max_score }}</span>
         </div>
         <div class="col-sm-4 text-center">
-          <span class="text-dim small d-block">Overall Score</span>
+          <span class="text-muted small d-block">Overall Score</span>
           <span class="fw-bold fs-5 {{ 'text-success' if result.passed else 'text-warning' }}">{{ result.percentage }}%</span>
         </div>
       </div>
       {% endif %}
 
-      <div class="p-3 bg-dark rounded border border-secondary border-opacity-25 small text-dim mb-4">
+      <div class="p-3 bg-light rounded border small text-muted mb-4" style="border-color: var(--border-color) !important;">
         <i class="bi bi-shield-lock text-primary me-1"></i>
         Anti-Matrix One-Attempt Integrity Rule: This credential has now transitioned to <code>USED</code> status.
         No additional attempts may be launched.
       </div>
 
       <div class="d-flex justify-content-center gap-3">
-        <a href="{{ url_for('candidate.dashboard') }}" class="btn btn-secondary">
+        <a href="{{ url_for('candidate.dashboard') }}" class="btn btn-outline-secondary">
           <i class="bi bi-speedometer2 me-1"></i>Return to Dashboard
         </a>
         <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-danger">

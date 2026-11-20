@@ -1,169 +1,118 @@
 {% extends "admin/base_admin.html" %}
 
-{% block title %}Dashboard Overview — ANTI-MATRIX Admin{% endblock %}
+{% block title %}Dashboard — ANTI-MATRIX{% endblock %}
 
 {% block admin_content %}
+<!-- Page Header -->
 <div class="d-flex justify-content-between align-items-center mb-4">
   <div>
-    <h3 class="fw-bold text-white mb-1">Recruitment & Assessment Overview</h3>
-    <p class="text-muted small mb-0">Real-time candidate metrics, credential validities, and examination outcomes.</p>
+    <h4 class="fw-bold text-dark mb-0">Dashboard</h4>
   </div>
   <div class="d-flex gap-2">
-    <a href="{{ url_for('admin.credential_create') }}" class="btn btn-primary">
-      <i class="bi bi-person-plus-fill me-1"></i>Create Candidate Credential
-    </a>
-    <a href="{{ url_for('admin.assessment_new') }}" class="btn btn-secondary">
-      <i class="bi bi-plus-circle me-1"></i>New Assessment
+    <a href="{{ url_for('admin.credential_create') }}" class="btn btn-primary btn-sm">
+      <i class="bi bi-plus-lg me-1"></i>Issue Credential
     </a>
   </div>
 </div>
 
-<!-- 6 Database-Driven Statistics Cards -->
+<!-- 5 Clean Useful Statistics Cards -->
 <div class="row g-3 mb-4">
   <!-- 1. Total Candidates -->
-  <div class="col-xl-2 col-md-4 col-sm-6">
-    <div class="metric-card info">
-      <div class="d-flex justify-content-between align-items-start mb-2">
+  <div class="col">
+    <div class="metric-card h-100">
+      <div class="d-flex justify-content-between align-items-center mb-1">
         <span class="metric-label">Total Candidates</span>
-        <div class="metric-icon" style="background: rgba(59, 130, 246, 0.15); color: #60a5fa;">
+        <div class="metric-icon" style="background: #EFF6FF; color: #2563EB;">
           <i class="bi bi-people-fill"></i>
         </div>
       </div>
       <div class="metric-value">{{ stats.total_candidates }}</div>
-      <small class="text-dim">Registered profiles</small>
     </div>
   </div>
 
   <!-- 2. Active Credentials -->
-  <div class="col-xl-2 col-md-4 col-sm-6">
-    <div class="metric-card warning">
-      <div class="d-flex justify-content-between align-items-start mb-2">
+  <div class="col">
+    <div class="metric-card h-100">
+      <div class="d-flex justify-content-between align-items-center mb-1">
         <span class="metric-label">Active Credentials</span>
-        <div class="metric-icon" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24;">
+        <div class="metric-icon" style="background: #FFFBEB; color: #D97706;">
           <i class="bi bi-key-fill"></i>
         </div>
       </div>
       <div class="metric-value">{{ stats.active_credentials }}</div>
-      <small class="text-dim">Within 48h window</small>
     </div>
   </div>
 
-  <!-- 3. Pending Assessments -->
-  <div class="col-xl-2 col-md-4 col-sm-6">
-    <div class="metric-card">
-      <div class="d-flex justify-content-between align-items-start mb-2">
-        <span class="metric-label">Pending Tests</span>
-        <div class="metric-icon" style="background: rgba(249, 115, 22, 0.15); color: #f97316;">
-          <i class="bi bi-hourglass-split"></i>
-        </div>
-      </div>
-      <div class="metric-value">{{ stats.pending_assessments }}</div>
-      <small class="text-dim">Active / In-Progress</small>
-    </div>
-  </div>
-
-  <!-- 4. Completed Assessments -->
-  <div class="col-xl-2 col-md-4 col-sm-6">
-    <div class="metric-card info">
-      <div class="d-flex justify-content-between align-items-start mb-2">
-        <span class="metric-label">Completed</span>
-        <div class="metric-icon" style="background: rgba(99, 102, 241, 0.15); color: #818cf8;">
+  <!-- 3. Completed Assessments -->
+  <div class="col">
+    <div class="metric-card h-100">
+      <div class="d-flex justify-content-between align-items-center mb-1">
+        <span class="metric-label">Completed Assessments</span>
+        <div class="metric-icon" style="background: #F8FAFC; color: #475569;">
           <i class="bi bi-check2-circle"></i>
         </div>
       </div>
       <div class="metric-value">{{ stats.completed_assessments }}</div>
-      <small class="text-dim">Submitted attempts</small>
     </div>
   </div>
 
-  <!-- 5. Passed Candidates -->
-  <div class="col-xl-2 col-md-4 col-sm-6">
-    <div class="metric-card success">
-      <div class="d-flex justify-content-between align-items-start mb-2">
-        <span class="metric-label">Passed</span>
-        <div class="metric-icon" style="background: rgba(16, 185, 129, 0.15); color: #34d399;">
+  <!-- 4. Passed Candidates -->
+  <div class="col">
+    <div class="metric-card h-100">
+      <div class="d-flex justify-content-between align-items-center mb-1">
+        <span class="metric-label">Passed Candidates</span>
+        <div class="metric-icon" style="background: #F0FDF4; color: #16A34A;">
           <i class="bi bi-trophy-fill"></i>
         </div>
       </div>
       <div class="metric-value text-success">{{ stats.passed_candidates }}</div>
-      <small class="text-dim">Met pass percentage</small>
     </div>
   </div>
 
-  <!-- 6. Failed Candidates -->
-  <div class="col-xl-2 col-md-4 col-sm-6">
-    <div class="metric-card danger">
-      <div class="d-flex justify-content-between align-items-start mb-2">
-        <span class="metric-label">Failed</span>
-        <div class="metric-icon" style="background: rgba(239, 68, 68, 0.15); color: #f87171;">
+  <!-- 5. Failed Candidates -->
+  <div class="col">
+    <div class="metric-card h-100">
+      <div class="d-flex justify-content-between align-items-center mb-1">
+        <span class="metric-label">Failed Candidates</span>
+        <div class="metric-icon" style="background: #FEF2F2; color: #DC2626;">
           <i class="bi bi-x-octagon-fill"></i>
         </div>
       </div>
       <div class="metric-value text-danger">{{ stats.failed_candidates }}</div>
-      <small class="text-dim">Below pass cutoff</small>
     </div>
   </div>
 </div>
 
-<!-- Two Columns: Recent Credentials & Recent Attempts -->
-<div class="row g-4 mb-4">
-  <!-- Recent Credentials -->
-  <div class="col-lg-7">
-    <div class="card-dark h-100">
+<!-- 3 Clean Activity Sections -->
+<div class="row g-4">
+  <!-- Recent Candidates -->
+  <div class="col-lg-6">
+    <div class="card-clean h-100 p-3">
       <div class="d-flex justify-content-between align-items-center mb-3">
-        <h5 class="fw-bold text-white mb-0">
-          <i class="bi bi-key-fill text-warning me-2"></i>Recent Candidate Credentials
-        </h5>
-        <a href="{{ url_for('admin.credentials') }}" class="btn btn-outline-secondary btn-sm">
-          View All <i class="bi bi-arrow-right ms-1"></i>
-        </a>
+        <h6 class="fw-bold text-dark mb-0">Recent Candidates</h6>
+        <a href="{{ url_for('admin.candidates') }}" class="text-primary small fw-semibold">View All</a>
       </div>
-
       <div class="table-responsive">
         <table class="table-custom">
           <thead>
             <tr>
-              <th>Candidate</th>
+              <th>Name</th>
               <th>User ID</th>
-              <th>Assessment</th>
-              <th>Remaining Time</th>
-              <th>Status</th>
+              <th>Email</th>
+              <th>Joined</th>
             </tr>
           </thead>
           <tbody>
-            {% for cred in stats.recent_credentials %}
+            {% for cand in stats.recent_candidates %}
             <tr>
-              <td>
-                <div class="fw-bold text-white">{{ cred.candidate.full_name }}</div>
-                <div class="text-dim small">{{ cred.candidate.email }}</div>
-              </td>
-              <td><code>{{ cred.candidate.user_id }}</code></td>
-              <td>
-                <span class="text-truncate d-inline-block" style="max-width: 140px;" title="{{ cred.assessment.title }}">
-                  {{ cred.assessment.code }}
-                </span>
-              </td>
-              <td>
-                {% if cred.effective_status == 'ACTIVE' %}
-                  <span class="text-warning small"><i class="bi bi-clock me-1"></i>{{ cred.time_remaining_display }}</span>
-                {% elif cred.effective_status == 'USED' %}
-                  <span class="text-info small"><i class="bi bi-check me-1"></i>Claimed</span>
-                {% else %}
-                  <span class="text-muted small">Elapsed</span>
-                {% endif %}
-              </td>
-              <td>
-                {% set st = cred.effective_status %}
-                <span class="badge-custom badge-{{ st|lower }}">
-                  {{ st }}
-                </span>
-              </td>
+              <td class="fw-medium text-dark">{{ cand.full_name }}</td>
+              <td><code class="small text-muted">{{ cand.user_id }}</code></td>
+              <td class="text-muted small">{{ cand.email }}</td>
+              <td class="text-muted small">{{ cand.created_at.strftime('%b %d, %Y') if cand.created_at else '-' }}</td>
             </tr>
             {% else %}
             <tr>
-              <td colspan="5" class="text-center text-dim py-4">
-                No credentials created yet. Click "Issue Credential" to generate one.
-              </td>
+              <td colspan="4" class="text-center text-muted py-3 small">No candidate profiles registered yet.</td>
             </tr>
             {% endfor %}
           </tbody>
@@ -172,63 +121,99 @@
     </div>
   </div>
 
-  <!-- Recent Examination Outcomes -->
-  <div class="col-lg-5">
-    <div class="card-dark h-100">
+  <!-- Recent Examination Results -->
+  <div class="col-lg-6">
+    <div class="card-clean h-100 p-3">
       <div class="d-flex justify-content-between align-items-center mb-3">
-        <h5 class="fw-bold text-white mb-0">
-          <i class="bi bi-card-checklist text-primary me-2"></i>Recent Attempts
-        </h5>
-        <a href="{{ url_for('admin.results') }}" class="btn btn-outline-secondary btn-sm">
-          All Results <i class="bi bi-arrow-right ms-1"></i>
-        </a>
+        <h6 class="fw-bold text-dark mb-0">Recent Examination Results</h6>
+        <a href="{{ url_for('admin.results') }}" class="text-primary small fw-semibold">View All</a>
       </div>
-
       <div class="table-responsive">
         <table class="table-custom">
           <thead>
             <tr>
               <th>Candidate</th>
-              <th>Status</th>
+              <th>Assessment</th>
               <th>Score</th>
-              <th>Verdict</th>
+              <th>Result</th>
             </tr>
           </thead>
           <tbody>
-            {% for att in stats.recent_attempts %}
+            {% for res in stats.recent_results %}
             <tr>
+              <td class="fw-medium text-dark">{{ res.candidate.full_name }}</td>
+              <td class="text-muted small">{{ res.assessment.code }}</td>
+              <td class="fw-semibold text-dark">{{ res.score }} / {{ res.max_score }}</td>
               <td>
-                <div class="fw-bold text-white">{{ att.candidate.full_name }}</div>
-                <div class="text-dim small">{{ att.assessment.code }}</div>
-              </td>
-              <td>
-                <span class="badge-custom badge-{{ att.status|lower }}">{{ att.status }}</span>
-              </td>
-              <td>
-                {% if att.result %}
-                  <span class="fw-bold">{{ att.result.score }} / {{ att.result.max_score }}</span>
-                  <div class="text-dim small">{{ att.result.percentage }}%</div>
+                {% if res.passed %}
+                  <span class="badge badge-active">PASS</span>
                 {% else %}
-                  <span class="text-dim">--</span>
-                {% endif %}
-              </td>
-              <td>
-                {% if att.result %}
-                  {% if att.result.passed %}
-                    <span class="badge bg-success-subtle text-success border border-success border-opacity-25 px-2 py-1">PASSED</span>
-                  {% else %}
-                    <span class="badge bg-danger-subtle text-danger border border-danger border-opacity-25 px-2 py-1">FAILED</span>
-                  {% endif %}
-                {% else %}
-                  <span class="text-warning small"><i class="bi bi-hourglass-split me-1"></i>Testing</span>
+                  <span class="badge badge-expired">FAIL</span>
                 {% endif %}
               </td>
             </tr>
             {% else %}
             <tr>
-              <td colspan="4" class="text-center text-dim py-4">
-                No examination attempts recorded yet.
+              <td colspan="4" class="text-center text-muted py-3 small">No completed examination results yet.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recently Created Credentials -->
+  <div class="col-12">
+    <div class="card-clean p-3">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h6 class="fw-bold text-dark mb-0">Recently Created Credentials</h6>
+        <a href="{{ url_for('admin.credentials') }}" class="text-primary small fw-semibold">View All Credentials</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table-custom">
+          <thead>
+            <tr>
+              <th>Candidate</th>
+              <th>User ID</th>
+              <th>Assessment</th>
+              <th>Created Date</th>
+              <th>Expiry Date</th>
+              <th>Status</th>
+              <th class="text-end">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for cred in stats.recent_credentials %}
+            <tr>
+              <td>
+                <div class="fw-medium text-dark">{{ cred.candidate.full_name }}</div>
+                <small class="text-muted">{{ cred.candidate.email }}</small>
               </td>
+              <td><code>{{ cred.candidate.user_id }}</code></td>
+              <td><span class="badge badge-secondary">{{ cred.assessment.code }}</span></td>
+              <td class="text-muted small">{{ cred.created_at.strftime('%b %d, %Y %H:%M') }}</td>
+              <td class="text-muted small">{{ cred.expires_at.strftime('%b %d, %Y %H:%M') }}</td>
+              <td>
+                {% if cred.status == 'ACTIVE' and not cred.is_expired %}
+                  <span class="badge badge-active">Active</span>
+                {% elif cred.status == 'USED' %}
+                  <span class="badge badge-used">Used</span>
+                {% elif cred.is_expired or cred.status == 'EXPIRED' %}
+                  <span class="badge badge-expired">Expired</span>
+                {% else %}
+                  <span class="badge badge-disabled">{{ cred.status }}</span>
+                {% endif %}
+              </td>
+              <td class="text-end">
+                <a href="{{ url_for('admin.credential_confirm', credential_id=cred.id) }}" class="btn btn-outline-secondary btn-sm" title="View Invitation Voucher">
+                  <i class="bi bi-ticket-detailed"></i>
+                </a>
+              </td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="7" class="text-center text-muted py-3 small">No candidate credentials generated yet.</td>
             </tr>
             {% endfor %}
           </tbody>

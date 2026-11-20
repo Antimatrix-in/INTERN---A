@@ -5,7 +5,7 @@
 {% block admin_content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
   <div>
-    <h3 class="fw-bold text-white mb-1">Candidate Manager</h3>
+    <h3 class="fw-bold mb-1" style="color: var(--text-main);">Candidate Manager</h3>
     <p class="text-muted small mb-0">Overview of registered candidate profiles, assigned assessments, and account activities.</p>
   </div>
   <a href="{{ url_for('admin.credential_create') }}" class="btn btn-primary">
@@ -13,67 +13,75 @@
   </a>
 </div>
 
-<div class="card-dark">
+<div class="card-dark p-0 overflow-hidden">
   <div class="table-responsive">
-    <table class="table-custom">
+    <table class="table-custom mb-0">
       <thead>
         <tr>
+          <th>Candidate Name</th>
+          <th>Email</th>
           <th>User ID</th>
-          <th>Full Name</th>
-          <th>Email Address</th>
-          <th>Assigned Assessment</th>
-          <th>Credential Status</th>
-          <th>Attempt Status</th>
-          <th>Registered At (UTC)</th>
-          <th>Last Login</th>
+          <th>Assessment</th>
+          <th>Examination Status</th>
+          <th>Result</th>
+          <th class="text-end">Actions</th>
         </tr>
       </thead>
       <tbody>
         {% for cand in candidates %}
         <tr>
           <td>
-            <code class="text-info fw-bold">{{ cand.user_id }}</code>
-          </td>
-          <td>
-            <div class="fw-bold text-white">{{ cand.full_name }}</div>
+            <div class="fw-bold" style="color: var(--text-main);">{{ cand.full_name }}</div>
           </td>
           <td class="text-muted small">{{ cand.email }}</td>
           <td>
-            {% if cand.credential and cand.credential.assessment %}
-              <span class="badge bg-dark border border-secondary text-primary font-monospace">{{ cand.credential.assessment.code }}</span>
-            {% else %}
-              <span class="text-dim small">None</span>
-            {% endif %}
+            <code class="fw-bold text-primary">{{ cand.user_id }}</code>
           </td>
           <td>
-            {% if cand.credential %}
-              {% set st = cand.credential.effective_status %}
-              <span class="badge-custom badge-{{ st|lower }}">{{ st }}</span>
+            {% if cand.credential and cand.credential.assessment %}
+              <span class="badge bg-light text-secondary border font-monospace">{{ cand.credential.assessment.code }}</span>
             {% else %}
-              <span class="text-dim small">No Credential</span>
+              <span class="text-muted small">—</span>
             {% endif %}
           </td>
           <td>
             {% if cand.credential and cand.credential.attempt %}
-              <span class="badge-custom badge-{{ cand.credential.attempt.status|lower }}">
-                {{ cand.credential.attempt.status }}
+              {% set att_st = cand.credential.attempt.status %}
+              <span class="badge-custom badge-{{ att_st|lower }}">
+                {{ att_st }}
               </span>
+            {% elif cand.credential %}
+              {% set st = cand.credential.effective_status %}
+              <span class="badge-custom badge-{{ st|lower }}">{{ st }}</span>
             {% else %}
-              <span class="text-dim small">Not Started</span>
+              <span class="text-muted small">Not Started</span>
             {% endif %}
           </td>
-          <td class="text-dim small">{{ cand.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
-          <td class="text-dim small">
-            {% if cand.last_login %}
-              {{ cand.last_login.strftime('%Y-%m-%d %H:%M') }}
+          <td>
+            {% if cand.credential and cand.credential.attempt and cand.credential.attempt.result %}
+              {% set res = cand.credential.attempt.result %}
+              {% if res.passed %}
+                <span class="badge-custom badge-active"><i class="bi bi-check-circle-fill me-1"></i>PASSED ({{ res.percentage }}%)</span>
+              {% else %}
+                <span class="badge-custom badge-danger"><i class="bi bi-x-circle-fill me-1"></i>FAILED ({{ res.percentage }}%)</span>
+              {% endif %}
             {% else %}
-              <span class="text-dim">Never</span>
+              <span class="text-muted small">Pending</span>
             {% endif %}
+          </td>
+          <td class="text-end">
+            <div class="btn-group btn-group-sm">
+              {% if cand.credential %}
+                <a href="{{ url_for('admin.credential_confirm', credential_id=cand.credential.id) }}" class="btn btn-outline-secondary" title="View Credential Voucher">
+                  <i class="bi bi-eye"></i>
+                </a>
+              {% endif %}
+            </div>
           </td>
         </tr>
         {% else %}
         <tr>
-          <td colspan="8" class="text-center text-dim py-5">
+          <td colspan="7" class="text-center text-muted py-5">
             <i class="bi bi-people fs-1 d-block mb-2"></i>
             No candidate profiles registered yet. Candidates are created automatically when credentials are generated.
           </td>

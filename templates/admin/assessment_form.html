@@ -5,10 +5,10 @@
 {% block admin_content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
   <div>
-    <h3 class="fw-bold text-white mb-1">{{ 'Edit Assessment: ' + assessment.title if assessment else 'Create Assessment' }}</h3>
+    <h3 class="fw-bold mb-1" style="color: var(--text-main);">{{ 'Edit Assessment: ' + assessment.title if assessment else 'Create Assessment' }}</h3>
     <p class="text-muted small mb-0">Configure test duration, question distribution, pass threshold, and coding problems.</p>
   </div>
-  <a href="{{ url_for('admin.assessments') }}" class="btn btn-secondary">
+  <a href="{{ url_for('admin.assessments') }}" class="btn btn-outline-secondary">
     <i class="bi bi-arrow-left me-1"></i>Back to Assessments
   </a>
 </div>
@@ -55,7 +55,7 @@
           <div class="col-md-6">
             <label class="form-label-custom">Duration (Minutes) <span class="text-danger">*</span></label>
             <div class="input-group">
-              <span class="input-group-text bg-dark border-secondary text-dim"><i class="bi bi-clock"></i></span>
+              <span class="input-group-text bg-light text-muted border-end-0"><i class="bi bi-clock"></i></span>
               <input 
                 type="number" 
                 name="duration_minutes" 
@@ -65,13 +65,13 @@
                 value="{{ form_data.duration_minutes or (assessment.duration_minutes if assessment else 60) }}" 
                 required>
             </div>
-            <div class="form-text text-dim" style="font-size: 0.75rem;">Server-side enforced countdown limit once started.</div>
+            <div class="form-text text-muted" style="font-size: 0.75rem;">Server-side enforced countdown limit once started.</div>
           </div>
 
           <div class="col-md-6">
             <label class="form-label-custom">Pass Percentage (%) <span class="text-danger">*</span></label>
             <div class="input-group">
-              <span class="input-group-text bg-dark border-secondary text-dim"><i class="bi bi-percent"></i></span>
+              <span class="input-group-text bg-light text-muted border-end-0"><i class="bi bi-percent"></i></span>
               <input 
                 type="number" 
                 name="pass_percentage" 
@@ -82,7 +82,7 @@
                 value="{{ form_data.pass_percentage or (assessment.pass_percentage if assessment else 60.0) }}" 
                 required>
             </div>
-            <div class="form-text text-dim" style="font-size: 0.75rem;">Minimum percentage required to achieve a PASS verdict.</div>
+            <div class="form-text text-muted" style="font-size: 0.75rem;">Minimum percentage required to achieve a PASS verdict.</div>
           </div>
         </div>
 
@@ -109,11 +109,11 @@
                 </option>
               {% endfor %}
             </select>
-            <div class="form-text text-dim" style="font-size: 0.75rem;">Phase 1 architecture allocation (1 - 5 problems per requirement).</div>
+            <div class="form-text text-muted" style="font-size: 0.75rem;">Phase 1 architecture allocation (1 - 5 problems per requirement).</div>
           </div>
         </div>
 
-        <div class="mb-4 p-3 rounded bg-dark border border-secondary border-opacity-25">
+        <div class="mb-4 p-3 rounded bg-light border">
           <div class="form-check form-switch">
             <input 
               class="form-check-input" 
@@ -121,15 +121,15 @@
               name="is_active" 
               id="isActiveSwitch"
               {% if (form_data.is_active is defined and form_data.is_active) or (assessment and assessment.is_active) or (not assessment) %}checked{% endif %}>
-            <label class="form-check-label text-white fw-bold ms-2" for="isActiveSwitch">
+            <label class="form-check-label fw-bold ms-2" for="isActiveSwitch" style="color: var(--text-main);">
               Active Assessment Status
             </label>
           </div>
-          <small class="text-dim d-block mt-1">Inactive assessments cannot be assigned to new candidate credentials or started.</small>
+          <small class="text-muted d-block mt-1">Inactive assessments cannot be assigned to new candidate credentials or started.</small>
         </div>
 
         <div class="d-flex justify-content-end gap-2">
-          <a href="{{ url_for('admin.assessments') }}" class="btn btn-secondary">Cancel</a>
+          <a href="{{ url_for('admin.assessments') }}" class="btn btn-outline-secondary">Cancel</a>
           <button type="submit" class="btn btn-primary px-4">
             <i class="bi bi-check-lg me-1"></i>{{ 'Update Assessment' if assessment else 'Save Assessment' }}
           </button>

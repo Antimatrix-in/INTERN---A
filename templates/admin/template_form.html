@@ -5,12 +5,12 @@
 {% block admin_content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
   <div>
-    <h3 class="fw-bold text-white mb-1">
+    <h3 class="fw-bold mb-1" style="color: var(--text-main);">
       <i class="bi bi-envelope-paper text-primary me-2"></i>{% if template %}Edit Email Template{% else %}Create Email Template{% endif %}
     </h3>
     <p class="text-muted small mb-0">Configure notification content, subject line, and dynamic candidate placeholders.</p>
   </div>
-  <a href="{{ url_for('admin.templates') }}" class="btn btn-secondary">
+  <a href="{{ url_for('admin.templates') }}" class="btn btn-outline-secondary">
     <i class="bi bi-arrow-left me-1"></i>Back to Templates
   </a>
 </div>
@@ -32,7 +32,7 @@
               placeholder="e.g. Application Acknowledgment"
               value="{{ template.name if template else (form_data.get('name') if form_data else '') }}" 
               required>
-            <div class="form-text text-dim">Unique identifier for this template across the platform.</div>
+            <div class="form-text text-muted">Unique identifier for this template across the platform.</div>
           </div>
           <div class="col-md-4">
             <label class="form-label-custom">Category <span class="text-danger">*</span></label>
@@ -47,7 +47,7 @@
             <div class="form-check form-switch mt-2">
               {% set cur_active = template.is_active if template else (form_data.get('is_active', True) if form_data else True) %}
               <input class="form-check-input" type="checkbox" name="is_active" id="isActiveCheck" {% if cur_active %}checked{% endif %}>
-              <label class="form-check-label text-white small" for="isActiveCheck">
+              <label class="form-check-label small" for="isActiveCheck" style="color: var(--text-main);">
                 Active
               </label>
             </div>
@@ -68,8 +68,8 @@
         </div>
 
         <!-- Placeholder Insert Helper Toolbar -->
-        <div class="mb-2 p-2 bg-dark rounded border border-secondary border-opacity-25 d-flex flex-wrap align-items-center gap-2">
-          <span class="text-dim small me-2"><i class="bi bi-braces text-primary me-1"></i>Insert Variable:</span>
+        <div class="mb-2 p-2 bg-light rounded border d-flex flex-wrap align-items-center gap-2">
+          <span class="text-muted small me-2"><i class="bi bi-braces text-primary me-1"></i>Insert Variable:</span>
           <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 font-monospace" style="font-size: 0.75rem;" onclick="insertTag('{{candidate_name}}')">
             &#123;&#123;candidate_name&#125;&#125;
           </button>
@@ -94,14 +94,14 @@
             class="form-control form-control-custom font-monospace" 
             placeholder="Write email content with placeholders..."
             required>{{ template.body if template else (form_data.get('body') if form_data else '') }}</textarea>
-          <div class="form-text text-dim">
+          <div class="form-text text-muted">
             Variables are automatically substituted with real candidate data upon event trigger.
           </div>
         </div>
 
         <!-- Action Buttons -->
-        <div class="d-flex justify-content-between align-items-center pt-3 border-top border-secondary border-opacity-25">
-          <a href="{{ url_for('admin.templates') }}" class="btn btn-secondary">Cancel</a>
+        <div class="d-flex justify-content-between align-items-center pt-3 border-top" style="border-color: var(--border-color) !important;">
+          <a href="{{ url_for('admin.templates') }}" class="btn btn-outline-secondary">Cancel</a>
           <button type="submit" class="btn btn-primary px-4">
             <i class="bi bi-check2-circle me-1"></i>{% if template %}Save Changes{% else %}Create Template{% endif %}
           </button>

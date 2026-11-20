@@ -22,5 +22,31 @@ class Result(db.Model):
     candidate = db.relationship('User', back_populates='results')
     assessment = db.relationship('Assessment', back_populates='results')
 
+    @property
+    def coding_score(self):
+        return 0.0
+
+    @property
+    def aptitude_score(self):
+        if not self.attempt or not self.attempt.answers:
+            return 0.0
+        pts = 0.0
+        for ans in self.attempt.answers:
+            if ans.is_answered and ans.question and ans.question.section == 'APTITUDE':
+                if ans.selected_option and ans.selected_option.strip().upper() == ans.question.correct_option.strip().upper():
+                    pts += ans.question.points
+        return pts
+
+    @property
+    def mcq_score(self):
+        if not self.attempt or not self.attempt.answers:
+            return self.score
+        pts = 0.0
+        for ans in self.attempt.answers:
+            if ans.is_answered and ans.question and (ans.question.section == 'MCQ' or not ans.question.section):
+                if ans.selected_option and ans.selected_option.strip().upper() == ans.question.correct_option.strip().upper():
+                    pts += ans.question.points
+        return pts
+
     def __repr__(self):
         return f"<Result Attempt={self.attempt_id}, Score={self.score}/{self.max_score} ({self.percentage}%), Passed={self.passed}>"

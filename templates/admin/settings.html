@@ -5,57 +5,57 @@
 {% block admin_content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
   <div>
-    <h3 class="fw-bold text-white mb-1">Platform Settings & Environment</h3>
-    <p class="text-muted small mb-0">System configuration, PostgreSQL connection status, security parameters, and administrator info.</p>
+    <h3 class="fw-bold mb-1" style="color: var(--text-main);">Platform Settings & Environment</h3>
+    <p class="text-muted small mb-0">System configuration, SQLite/PostgreSQL connection status, security parameters, and administrator info.</p>
   </div>
 </div>
 
 <div class="row g-4">
   <div class="col-lg-6">
     <div class="card-dark h-100">
-      <h5 class="fw-bold text-white mb-3">
+      <h5 class="fw-bold mb-3" style="color: var(--text-main);">
         <i class="bi bi-shield-lock-fill text-primary me-2"></i>Security & Expiry Configuration
       </h5>
 
       <div class="list-group list-group-flush bg-transparent">
-        <div class="list-group-item bg-transparent text-white border-secondary d-flex justify-content-between align-items-center px-0">
+        <div class="list-group-item bg-transparent d-flex justify-content-between align-items-center px-0 py-3" style="border-color: var(--border-color);">
           <div>
-            <div class="fw-semibold">Credential Validity Window</div>
-            <small class="text-dim">Hardcoded strictly to Anti-Matrix recruitment policy</small>
+            <div class="fw-semibold" style="color: var(--text-main);">Credential Validity Window</div>
+            <small class="text-muted">Strict Anti-Matrix recruitment policy</small>
           </div>
-          <span class="badge bg-warning-subtle text-warning border border-warning border-opacity-25 fs-6">48 Hours</span>
+          <span class="badge-custom badge-warning">48 Hours</span>
         </div>
 
-        <div class="list-group-item bg-transparent text-white border-secondary d-flex justify-content-between align-items-center px-0">
+        <div class="list-group-item bg-transparent d-flex justify-content-between align-items-center px-0 py-3" style="border-color: var(--border-color);">
           <div>
-            <div class="fw-semibold">Attempt Policy</div>
-            <small class="text-dim">Database constraint enforcement</small>
+            <div class="fw-semibold" style="color: var(--text-main);">Attempt Policy</div>
+            <small class="text-muted">Database constraint enforcement</small>
           </div>
-          <span class="badge bg-info-subtle text-info border border-info border-opacity-25">1 Attempt per Credential</span>
+          <span class="badge-custom badge-info">1 Attempt per Credential</span>
         </div>
 
-        <div class="list-group-item bg-transparent text-white border-secondary d-flex justify-content-between align-items-center px-0">
+        <div class="list-group-item bg-transparent d-flex justify-content-between align-items-center px-0 py-3" style="border-color: var(--border-color);">
           <div>
-            <div class="fw-semibold">Password Hashing Algorithm</div>
-            <small class="text-dim">Werkzeug security framework</small>
+            <div class="fw-semibold" style="color: var(--text-main);">Password Hashing Algorithm</div>
+            <small class="text-muted">Werkzeug security framework</small>
           </div>
-          <span class="badge bg-success-subtle text-success border border-success border-opacity-25 font-monospace">scrypt / pbkdf2:sha256</span>
+          <span class="badge-custom badge-active font-monospace">scrypt / pbkdf2:sha256</span>
         </div>
 
-        <div class="list-group-item bg-transparent text-white border-secondary d-flex justify-content-between align-items-center px-0">
+        <div class="list-group-item bg-transparent d-flex justify-content-between align-items-center px-0 py-3" style="border-color: var(--border-color);">
           <div>
-            <div class="fw-semibold">CSRF Protection</div>
-            <small class="text-dim">Flask-WTF token enforcement on all state-altering requests</small>
+            <div class="fw-semibold" style="color: var(--text-main);">CSRF Protection</div>
+            <small class="text-muted">Flask-WTF token enforcement on all state-altering requests</small>
           </div>
-          <span class="badge bg-success text-white">Enabled</span>
+          <span class="badge-custom badge-active">Enabled</span>
         </div>
 
-        <div class="list-group-item bg-transparent text-white border-secondary d-flex justify-content-between align-items-center px-0">
+        <div class="list-group-item bg-transparent d-flex justify-content-between align-items-center px-0 py-3" style="border-color: var(--border-color);">
           <div>
-            <div class="fw-semibold">Max Upload Size</div>
-            <small class="text-dim">JSON question bank file upload threshold</small>
+            <div class="fw-semibold" style="color: var(--text-main);">Max Upload Size</div>
+            <small class="text-muted">JSON question bank file upload threshold</small>
           </div>
-          <span class="text-white font-monospace">5 MB</span>
+          <span class="font-monospace fw-semibold" style="color: var(--text-main);">5 MB</span>
         </div>
       </div>
     </div>
@@ -63,41 +63,41 @@
 
   <div class="col-lg-6">
     <div class="card-dark h-100">
-      <h5 class="fw-bold text-white mb-3">
+      <h5 class="fw-bold mb-3" style="color: var(--text-main);">
         <i class="bi bi-database-fill text-success me-2"></i>Database Infrastructure
       </h5>
 
       <div class="list-group list-group-flush bg-transparent">
-        <div class="list-group-item bg-transparent text-white border-secondary d-flex justify-content-between align-items-center px-0">
+        <div class="list-group-item bg-transparent d-flex justify-content-between align-items-center px-0 py-3" style="border-color: var(--border-color);">
           <div>
-            <div class="fw-semibold">Active Database</div>
-            <small class="text-dim">Environment-configured DBMS</small>
+            <div class="fw-semibold" style="color: var(--text-main);">Active Database</div>
+            <small class="text-muted">Environment-configured DBMS</small>
           </div>
-          <span class="badge bg-dark border border-secondary text-primary font-monospace">{{ active_db_name }}</span>
+          <span class="badge bg-light text-secondary border font-monospace">{{ active_db_name }}</span>
         </div>
 
-        <div class="list-group-item bg-transparent text-white border-secondary d-flex justify-content-between align-items-center px-0">
+        <div class="list-group-item bg-transparent d-flex justify-content-between align-items-center px-0 py-3" style="border-color: var(--border-color);">
           <div>
-            <div class="fw-semibold">Foreign Key Constraints</div>
-            <small class="text-dim">Relational integrity & cascade enforcement</small>
+            <div class="fw-semibold" style="color: var(--text-main);">Foreign Key Constraints</div>
+            <small class="text-muted">Relational integrity & cascade enforcement</small>
           </div>
-          <span class="badge bg-success-subtle text-success border border-success border-opacity-25">Enforced (PRAGMA foreign_keys=ON)</span>
+          <span class="badge-custom badge-active">Enforced</span>
         </div>
 
-        <div class="list-group-item bg-transparent text-white border-secondary d-flex justify-content-between align-items-center px-0">
+        <div class="list-group-item bg-transparent d-flex justify-content-between align-items-center px-0 py-3" style="border-color: var(--border-color);">
           <div>
-            <div class="fw-semibold">Logged-in Administrator</div>
-            <small class="text-dim">{{ current_user.email }}</small>
+            <div class="fw-semibold" style="color: var(--text-main);">Logged-in Administrator</div>
+            <small class="text-muted">{{ current_user.email }}</small>
           </div>
-          <span class="badge bg-primary">{{ current_user.username }}</span>
+          <span class="badge bg-primary text-white">{{ current_user.username }}</span>
         </div>
 
-        <div class="list-group-item bg-transparent text-white border-secondary d-flex justify-content-between align-items-center px-0">
+        <div class="list-group-item bg-transparent d-flex justify-content-between align-items-center px-0 py-3" style="border-color: var(--border-color);">
           <div>
-            <div class="fw-semibold">Phase Status</div>
-            <small class="text-dim">Phase 1: Foundation, Authentication, Credential & Admin</small>
+            <div class="fw-semibold" style="color: var(--text-main);">Phase Status</div>
+            <small class="text-muted">Anti-Matrix Recruitment Platform</small>
           </div>
-          <span class="badge bg-success">Production Ready</span>
+          <span class="badge-custom badge-active">Production Ready</span>
         </div>
       </div>
     </div>

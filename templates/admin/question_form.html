@@ -10,16 +10,16 @@
 {% block admin_content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
   <div>
-    <h3 class="fw-bold text-white mb-1">
+    <h3 class="fw-bold mb-1" style="color: var(--text-main);">
       <i class="bi {% if is_aptitude %}bi-calculator-fill text-info{% else %}bi-ui-checks-grid text-success{% endif %} me-2"></i>
       {% if question %}Edit {{ cat_label }} Question{% else %}Add New {{ cat_label }} Question{% endif %}
     </h3>
     <p class="text-muted small mb-0">
-      Configure question text, four discrete answer choices (A, B, C, D), correct option, and detailed explanation. 
+      Configure question text, four discrete answer choices (A, B, C, D), correct option, and explanation. 
       Fixed at {{ expected_marks|int }} mark(s) per question.
     </p>
   </div>
-  <a href="{{ url_for('admin.questions', tab=back_tab) }}" class="btn btn-secondary">
+  <a href="{{ url_for('admin.questions', tab=back_tab) }}" class="btn btn-outline-secondary">
     <i class="bi bi-arrow-left me-1"></i>Back to {{ cat_label }} Questions
   </a>
 </div>
@@ -64,7 +64,7 @@
           <div class="col-md-3">
             <label class="form-label-custom">Marks (Allocated)</label>
             <input type="text" class="form-control form-control-custom fw-bold {% if is_aptitude %}text-info{% else %}text-success{% endif %}" value="{{ expected_marks }}" readonly>
-            <div class="form-text text-dim">Fixed at {{ expected_marks|int }} mark(s).</div>
+            <div class="form-text text-muted">Fixed at {{ expected_marks|int }} mark(s).</div>
           </div>
         </div>
 
@@ -95,7 +95,7 @@
 
           {% for letter in ['A', 'B', 'C', 'D'] %}
           <div class="input-group mb-2">
-            <span class="input-group-text bg-dark border-secondary text-primary fw-bold" style="width: 48px;">
+            <span class="input-group-text bg-light text-primary fw-bold" style="width: 48px;">
               {{ letter }}
             </span>
             <input 
@@ -105,7 +105,7 @@
               placeholder="Option {{ letter }} text"
               value="{{ opts_map.get(letter, '') }}" 
               required>
-            <div class="input-group-text bg-dark border-secondary">
+            <div class="input-group-text bg-light">
               <input 
                 class="form-check-input mt-0 me-2" 
                 type="radio" 
@@ -114,7 +114,7 @@
                 value="{{ letter }}" 
                 {% if cur_correct == letter %}checked{% endif %} 
                 required>
-              <label for="radio_{{ letter }}" class="text-white small mb-0 cursor-pointer">Correct</label>
+              <label for="radio_{{ letter }}" class="small mb-0 cursor-pointer" style="color: var(--text-main);">Correct</label>
             </div>
           </div>
           {% endfor %}
@@ -127,11 +127,11 @@
             rows="3" 
             class="form-control form-control-custom" 
             placeholder="Detailed explanation of the correct solution...">{{ question.explanation if question else (form_data.get('explanation') if form_data else '') }}</textarea>
-          <div class="form-text text-dim">Provides rationales to candidates during review or post-exam analysis.</div>
+          <div class="form-text text-muted">Provides rationales to candidates during review or post-exam analysis.</div>
         </div>
 
-        <div class="d-flex justify-content-between align-items-center pt-3 border-top border-secondary border-opacity-25">
-          <a href="{{ url_for('admin.questions', tab=back_tab) }}" class="btn btn-secondary">Cancel</a>
+        <div class="d-flex justify-content-between align-items-center pt-3 border-top" style="border-color: var(--border-color) !important;">
+          <a href="{{ url_for('admin.questions', tab=back_tab) }}" class="btn btn-outline-secondary">Cancel</a>
           <button type="submit" class="btn btn-primary px-4">
             <i class="bi bi-check2-circle me-1"></i>{% if question %}Update {{ cat_label }} Question{% else %}Save {{ cat_label }} Question{% endif %}
           </button>

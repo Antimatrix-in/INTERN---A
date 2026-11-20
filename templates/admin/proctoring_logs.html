@@ -5,16 +5,16 @@
 {% block admin_content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
   <div>
-    <h3 class="fw-bold text-white mb-1">
+    <h3 class="fw-bold mb-1" style="color: var(--text-main);">
       <i class="bi bi-camera-video-fill text-danger me-2"></i>Proctoring & Audit Logs
     </h3>
     <p class="text-muted small mb-0">Audit events, examination recovery checkpoints, and candidate browser activity telemetry.</p>
   </div>
 </div>
 
-<div class="card-dark">
+<div class="card-dark p-0 overflow-hidden">
   <div class="table-responsive">
-    <table class="table-custom">
+    <table class="table-custom mb-0">
       <thead>
         <tr>
           <th>Timestamp (UTC)</th>
@@ -27,29 +27,29 @@
       <tbody>
         {% for log in logs %}
         <tr>
-          <td class="text-dim small font-monospace">{{ log.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+          <td class="text-muted small font-monospace">{{ log.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
           <td>
-            <code class="text-primary">ATT-{{ log.attempt_id }}</code>
+            <code class="text-primary fw-bold">ATT-{{ log.attempt_id }}</code>
           </td>
           <td>
-            <div class="fw-bold text-white">{{ log.attempt.candidate.full_name if log.attempt and log.attempt.candidate else 'Candidate #' ~ log.candidate_id }}</div>
-            <div class="text-dim small">{{ log.attempt.assessment.code if log.attempt and log.attempt.assessment else '' }}</div>
+            <div class="fw-bold" style="color: var(--text-main);">{{ log.attempt.candidate.full_name if log.attempt and log.attempt.candidate else 'Candidate #' ~ log.candidate_id }}</div>
+            <div class="text-muted small">{{ log.attempt.assessment.code if log.attempt and log.attempt.assessment else '' }}</div>
           </td>
           <td>
             {% if log.event_type == 'RESUME_ATTEMPT' %}
-              <span class="badge bg-warning-subtle text-warning border border-warning border-opacity-25">
+              <span class="badge-custom badge-warning">
                 <i class="bi bi-arrow-repeat me-1"></i>RESUMED SESSION
               </span>
             {% elif log.event_type == 'TAB_SWITCH' %}
-              <span class="badge bg-danger-subtle text-danger border border-danger border-opacity-25">
+              <span class="badge-custom badge-danger">
                 <i class="bi bi-window-x me-1"></i>TAB SWITCH
               </span>
             {% elif log.event_type == 'SYSTEM_INFO' %}
-              <span class="badge bg-info-subtle text-info border border-info border-opacity-25">
+              <span class="badge-custom badge-info">
                 <i class="bi bi-info-circle me-1"></i>SESSION START
               </span>
             {% else %}
-              <span class="badge bg-secondary text-light">{{ log.event_type }}</span>
+              <span class="badge bg-light text-secondary border">{{ log.event_type }}</span>
             {% endif %}
           </td>
           <td>
@@ -60,7 +60,7 @@
         </tr>
         {% else %}
         <tr>
-          <td colspan="5" class="text-center text-dim py-5">
+          <td colspan="5" class="text-center text-muted py-5">
             <i class="bi bi-journal-medical fs-1 d-block mb-2"></i>
             No proctoring events logged yet. Events are recorded when tests start or are resumed.
           </td>

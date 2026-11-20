@@ -5,12 +5,12 @@
 {% block admin_content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
   <div>
-    <h3 class="fw-bold text-white mb-1">
+    <h3 class="fw-bold mb-1" style="color: var(--text-main);">
       <i class="bi bi-code-slash text-primary me-2"></i>{% if question %}Edit Coding Question{% else %}Add New Coding Question{% endif %}
     </h3>
     <p class="text-muted small mb-0">Configure coding challenge parameters, test cases, sample I/O, and programming language support. Fixed at 15 marks per problem.</p>
   </div>
-  <a href="{{ url_for('admin.questions', tab='coding') }}" class="btn btn-secondary">
+  <a href="{{ url_for('admin.questions', tab='coding') }}" class="btn btn-outline-secondary">
     <i class="bi bi-arrow-left me-1"></i>Back to Coding Questions
   </a>
 </div>
@@ -71,9 +71,9 @@
             <label class="form-label-custom">Marks (Allocated)</label>
             <div class="input-group">
               <input type="text" class="form-control form-control-custom fw-bold text-warning" value="15.0" readonly>
-              <span class="input-group-text bg-dark border-secondary text-dim small">Fixed (Specification)</span>
+              <span class="input-group-text bg-light text-muted small border-start-0">Fixed</span>
             </div>
-            <div class="form-text text-dim">Approved configuration allocates 15 marks per coding problem.</div>
+            <div class="form-text text-muted">Approved configuration allocates 15 marks per coding problem.</div>
           </div>
         </div>
 
@@ -142,7 +142,7 @@
         <div class="mb-4">
           <label class="form-label-custom d-block">Programming Languages Supported <span class="text-danger">*</span></label>
           {% set cur_langs = question.languages_supported if (question and question.languages_supported) else ["Python", "Java", "C++", "JavaScript", "C"] %}
-          <div class="d-flex flex-wrap gap-3 p-3 bg-dark rounded border border-secondary border-opacity-25">
+          <div class="d-flex flex-wrap gap-3 p-3 bg-light rounded border">
             {% for lang in ["Python", "Java", "C++", "JavaScript", "C", "Go", "Rust", "C#"] %}
               <div class="form-check">
                 <input 
@@ -152,7 +152,7 @@
                   value="{{ lang }}" 
                   id="lang_{{ lang }}"
                   {% if lang in cur_langs %}checked{% endif %}>
-                <label class="form-check-label text-white small" for="lang_{{ lang }}">
+                <label class="form-check-label small" for="lang_{{ lang }}" style="color: var(--text-main);">
                   {{ lang }}
                 </label>
               </div>
@@ -164,32 +164,27 @@
         <div class="mb-4">
           <div class="d-flex justify-content-between align-items-center mb-2">
             <label class="form-label-custom mb-0">Test Cases (JSON Format) <span class="text-danger">*</span></label>
-            <button type="button" class="btn btn-outline-secondary btn-sm" id="btnFillSampleTestCases">
-              <i class="bi bi-magic me-1"></i>Insert Sample Test Cases
+            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="insertSampleTestCases()">
+              <i class="bi bi-code-square me-1"></i>Insert Sample JSON
             </button>
           </div>
-          {% set tc_json_str = '' %}
-          {% if question and question.test_cases %}
-            {% set tc_json_str = question.test_cases | tojson(indent=2) %}
-          {% elif form_data and form_data.get('test_cases') %}
-            {% set tc_json_str = form_data.get('test_cases') %}
-          {% endif %}
           <textarea 
-            name="test_cases" 
-            id="testCasesField" 
-            rows="6" 
+            name="test_cases_json" 
+            id="testCasesJson"
+            rows="5" 
             class="form-control form-control-custom font-monospace" 
-            placeholder='[&#10;  {&#10;    "input": "4 9\n2 7 11 15",&#10;    "expected_output": "0 1",&#10;    "is_hidden": false&#10;  },&#10;  {&#10;    "input": "3 6\n3 2 4",&#10;    "expected_output": "1 2",&#10;    "is_hidden": true&#10;  }&#10;]'>{{ tc_json_str }}</textarea>
-          <div class="form-text text-dim">
-            Must be a JSON array of objects with <code>input</code>, <code>expected_output</code>, and optional boolean <code>is_hidden</code>.
+            placeholder='[{"input": "2 3\n", "expected_output": "5\n", "is_hidden": false}]'
+            required>{{ (question.test_cases|tojson(indent=2)) if (question and question.test_cases) else (form_data.get('test_cases_json') if form_data else '[{"input": "4 9\\n2 7 11 15\\n", "expected_output": "0 1\\n", "is_hidden": false}, {"input": "3 6\\n3 2 4\\n", "expected_output": "1 2\\n", "is_hidden": true}]') }}</textarea>
+          <div class="form-text text-muted">
+            Must be a valid JSON array of objects containing <code>input</code>, <code>expected_output</code>, and optional <code>is_hidden</code>.
           </div>
         </div>
 
-        <!-- Action Buttons -->
-        <div class="d-flex justify-content-between align-items-center pt-3 border-top border-secondary border-opacity-25">
-          <a href="{{ url_for('admin.questions', tab='coding') }}" class="btn btn-secondary">Cancel</a>
+        <!-- Form Actions -->
+        <div class="d-flex justify-content-between align-items-center pt-3 border-top" style="border-color: var(--border-color) !important;">
+          <a href="{{ url_for('admin.questions', tab='coding') }}" class="btn btn-outline-secondary">Cancel</a>
           <button type="submit" class="btn btn-primary px-4">
-            <i class="bi bi-check2-circle me-1"></i>{% if question %}Update Coding Question{% else %}Save Coding Question{% endif %}
+            <i class="bi bi-check2-circle me-1"></i>{% if question %}Update Coding Problem{% else %}Save Coding Problem{% endif %}
           </button>
         </div>
       </form>
@@ -200,27 +195,13 @@
 
 {% block extra_js %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-  const btnFill = document.getElementById('btnFillSampleTestCases');
-  const tcField = document.getElementById('testCasesField');
-  
-  if (btnFill && tcField) {
-    btnFill.addEventListener('click', function() {
-      const sample = [
-        {
-          "input": "4 9\n2 7 11 15",
-          "expected_output": "0 1",
-          "is_hidden": false
-        },
-        {
-          "input": "3 6\n3 2 4",
-          "expected_output": "1 2",
-          "is_hidden": true
-        }
-      ];
-      tcField.value = JSON.stringify(sample, null, 2);
-    });
-  }
-});
+function insertSampleTestCases() {
+  const sample = JSON.stringify([
+    {"input": "4 9\n2 7 11 15\n", "expected_output": "0 1\n", "is_hidden": false},
+    {"input": "3 6\n3 2 4\n", "expected_output": "1 2\n", "is_hidden": false},
+    {"input": "2 6\n3 3\n", "expected_output": "0 1\n", "is_hidden": true}
+  ], null, 2);
+  document.getElementById('testCasesJson').value = sample;
+}
 </script>
 {% endblock %}
