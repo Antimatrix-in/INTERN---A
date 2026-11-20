@@ -19,6 +19,7 @@ class Assessment(db.Model):
 
     # Relationships
     questions = db.relationship('Question', back_populates='assessment', cascade='all, delete-orphan', lazy='dynamic')
+    coding_questions = db.relationship('CodingQuestion', back_populates='assessment', cascade='all, delete-orphan', lazy='dynamic')
     credentials = db.relationship('Credential', back_populates='assessment', cascade='all, delete-orphan')
     attempts = db.relationship('Attempt', back_populates='assessment')
     results = db.relationship('Result', back_populates='assessment')

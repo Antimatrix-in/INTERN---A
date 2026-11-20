@@ -3,30 +3,205 @@
 {% block title %}Question Bank — ANTI-MATRIX Admin{% endblock %}
 
 {% block admin_content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
+<!-- Header -->
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
   <div>
-    <h3 class="fw-bold text-white mb-1">Question Bank</h3>
-    <p class="text-muted small mb-0">Manage multiple-choice questions, validate and import structured JSON question sets.</p>
+    <h3 class="fw-bold text-white mb-1">
+      <i class="bi bi-folder2-open text-primary me-2"></i>Question Bank
+    </h3>
+    <p class="text-muted small mb-0">
+      Multi-category assessment repository: Coding challenges, quantitative/verbal Aptitude, and Technical MCQs.
+    </p>
   </div>
-  <div class="d-flex gap-2">
-    <a href="{{ url_for('admin.question_template') }}" class="btn btn-outline-secondary" title="Download documented JSON schema template">
-      <i class="bi bi-download me-1"></i>JSON Template
+  <div class="d-flex flex-wrap gap-2">
+    <!-- Category-specific Download Template -->
+    <a href="{{ url_for('admin.question_template', category=active_tab) }}" class="btn btn-outline-secondary" title="Download official {{ category_config.name }} JSON template">
+      <i class="bi bi-download me-1"></i>{{ category_config.name }} Template
     </a>
-    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#uploadJsonModal">
+    <!-- Category-specific Upload Button -->
+    <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#uploadJsonModal">
       <i class="bi bi-file-earmark-arrow-up-fill me-1"></i>Upload JSON
     </button>
+    <!-- Category-specific Add Question Button -->
+    {% if active_tab == 'coding' %}
+      <a href="{{ url_for('admin.coding_question_new') }}" class="btn btn-primary">
+        <i class="bi bi-plus-circle me-1"></i>Add Coding Question
+      </a>
+    {% elif active_tab == 'aptitude' %}
+      <a href="{{ url_for('admin.aptitude_question_new') }}" class="btn btn-primary">
+        <i class="bi bi-plus-circle me-1"></i>Add Aptitude Question
+      </a>
+    {% else %}
+      <a href="{{ url_for('admin.mcq_question_new') }}" class="btn btn-primary">
+        <i class="bi bi-plus-circle me-1"></i>Add MCQ Question
+      </a>
+    {% endif %}
   </div>
 </div>
 
-<!-- Search & Filters -->
+<!-- Combined Assessment Summary Banner -->
+<div class="card-dark mb-4 p-3 border-primary border-opacity-25" style="background: linear-gradient(135deg, rgba(249, 115, 22, 0.08) 0%, rgba(17, 24, 39, 0.95) 100%);">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+    <div>
+      <span class="badge bg-primary text-uppercase px-2 py-1 me-2" style="font-size: 0.72rem; letter-spacing: 0.08em; font-weight: 700;">
+        Approved Assessment Specification
+      </span>
+      <h5 class="fw-bold text-white d-inline-block mb-0 align-middle">
+        Combined Assessment Summary: <span class="text-primary">Total Questions: 34</span> &bull; <span class="text-primary">Total Marks: 100</span>
+      </h5>
+    </div>
+    <div class="d-flex align-items-center gap-3">
+      <div class="text-end">
+        <small class="text-muted d-block" style="font-size: 0.75rem;">CURRENT REPOSITORY TOTALS</small>
+        <span class="fw-bold text-white fs-6">
+          <span class="text-success">{{ stats.overall.total_actual_questions }}</span> / 34 Questions &bull; 
+          <span class="text-warning">{{ stats.overall.total_actual_marks }}</span> / 100 Marks
+        </span>
+      </div>
+      <div class="vr bg-secondary opacity-25 d-none d-sm-block" style="height: 32px;"></div>
+      <div class="d-none d-md-block">
+        <span class="badge {% if stats.overall.total_actual_questions >= 34 %}bg-success-subtle text-success border border-success{% else %}bg-warning-subtle text-warning border border-warning{% endif %} px-2 py-1">
+          {% if stats.overall.total_actual_questions >= 34 %}
+            <i class="bi bi-check-circle-fill me-1"></i>Quota Satisfied
+          {% else %}
+            <i class="bi bi-hourglass-split me-1"></i>In Progress ({{ stats.overall.total_actual_questions }}/34)
+          {% endif %}
+        </span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Category Dashboard Cards -->
+<div class="row g-3 mb-4">
+  <!-- 1. CODING CARD -->
+  <div class="col-md-4">
+    <a href="{{ url_for('admin.questions', tab='coding', assessment_id=selected_assessment_id or '') }}" class="text-decoration-none">
+      <div class="card-dark p-3 h-100 transition-hover {% if active_tab == 'coding' %}border-primary border-2 shadow-sm{% endif %}">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <div class="d-flex align-items-center gap-2">
+            <div class="rounded p-2 text-primary" style="background: rgba(249, 115, 22, 0.15);">
+              <i class="bi bi-code-slash fs-5"></i>
+            </div>
+            <div>
+              <h6 class="fw-bold text-white mb-0 text-uppercase tracking-wide">Coding</h6>
+              <small class="text-dim" style="font-size: 0.72rem;">Programming Challenges</small>
+            </div>
+          </div>
+          <span class="badge bg-dark border border-secondary text-primary font-monospace">15 Marks / Q</span>
+        </div>
+        <div class="mt-3">
+          <div class="d-flex justify-content-between align-items-baseline mb-1">
+            <span class="fs-4 fw-bold text-white">{{ stats.coding.count }} <small class="text-muted fs-6">/ 4 Target</small></span>
+            <span class="fw-semibold text-warning" style="font-size: 0.85rem;">{{ stats.coding.count * 15 }} / 60 Total Marks</span>
+          </div>
+          <div class="text-dim small mb-2">4 Questions | 15 Marks Each | 60 Total Marks</div>
+          <div class="progress bg-dark" style="height: 6px;">
+            {% set coding_pct = (stats.coding.count / 4 * 100) if stats.coding.count < 4 else 100 %}
+            <div class="progress-bar bg-primary" role="progressbar" style="width: {{ coding_pct }}%;" aria-valuenow="{{ coding_pct }}" aria-valuemin="0" aria-valuemax="100"></div>
+          </div>
+        </div>
+      </div>
+    </a>
+  </div>
+
+  <!-- 2. APTITUDE CARD -->
+  <div class="col-md-4">
+    <a href="{{ url_for('admin.questions', tab='aptitude', assessment_id=selected_assessment_id or '') }}" class="text-decoration-none">
+      <div class="card-dark p-3 h-100 transition-hover {% if active_tab == 'aptitude' %}border-primary border-2 shadow-sm{% endif %}">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <div class="d-flex align-items-center gap-2">
+            <div class="rounded p-2 text-info" style="background: rgba(59, 130, 246, 0.15);">
+              <i class="bi bi-calculator-fill fs-5"></i>
+            </div>
+            <div>
+              <h6 class="fw-bold text-white mb-0 text-uppercase tracking-wide">Aptitude</h6>
+              <small class="text-dim" style="font-size: 0.72rem;">Logical & Quantitative</small>
+            </div>
+          </div>
+          <span class="badge bg-dark border border-secondary text-info font-monospace">2 Marks / Q</span>
+        </div>
+        <div class="mt-3">
+          <div class="d-flex justify-content-between align-items-baseline mb-1">
+            <span class="fs-4 fw-bold text-white">{{ stats.aptitude.count }} <small class="text-muted fs-6">/ 10 Target</small></span>
+            <span class="fw-semibold text-info" style="font-size: 0.85rem;">{{ stats.aptitude.count * 2 }} / 20 Total Marks</span>
+          </div>
+          <div class="text-dim small mb-2">10 Questions | 2 Marks Each | 20 Total Marks</div>
+          <div class="progress bg-dark" style="height: 6px;">
+            {% set apt_pct = (stats.aptitude.count / 10 * 100) if stats.aptitude.count < 10 else 100 %}
+            <div class="progress-bar bg-info" role="progressbar" style="width: {{ apt_pct }}%;" aria-valuenow="{{ apt_pct }}" aria-valuemin="0" aria-valuemax="100"></div>
+          </div>
+        </div>
+      </div>
+    </a>
+  </div>
+
+  <!-- 3. TECHNICAL MCQ CARD -->
+  <div class="col-md-4">
+    <a href="{{ url_for('admin.questions', tab='mcq', assessment_id=selected_assessment_id or '') }}" class="text-decoration-none">
+      <div class="card-dark p-3 h-100 transition-hover {% if active_tab == 'mcq' %}border-primary border-2 shadow-sm{% endif %}">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <div class="d-flex align-items-center gap-2">
+            <div class="rounded p-2 text-success" style="background: rgba(16, 185, 129, 0.15);">
+              <i class="bi bi-ui-checks-grid fs-5"></i>
+            </div>
+            <div>
+              <h6 class="fw-bold text-white mb-0 text-uppercase tracking-wide">Technical MCQ</h6>
+              <small class="text-dim" style="font-size: 0.72rem;">Core Domain & Concepts</small>
+            </div>
+          </div>
+          <span class="badge bg-dark border border-secondary text-success font-monospace">1 Mark / Q</span>
+        </div>
+        <div class="mt-3">
+          <div class="d-flex justify-content-between align-items-baseline mb-1">
+            <span class="fs-4 fw-bold text-white">{{ stats.mcq.count }} <small class="text-muted fs-6">/ 20 Target</small></span>
+            <span class="fw-semibold text-success" style="font-size: 0.85rem;">{{ stats.mcq.count * 1 }} / 20 Total Marks</span>
+          </div>
+          <div class="text-dim small mb-2">20 Questions | 1 Mark Each | 20 Total Marks</div>
+          <div class="progress bg-dark" style="height: 6px;">
+            {% set mcq_pct = (stats.mcq.count / 20 * 100) if stats.mcq.count < 20 else 100 %}
+            <div class="progress-bar bg-success" role="progressbar" style="width: {{ mcq_pct }}%;" aria-valuenow="{{ mcq_pct }}" aria-valuemin="0" aria-valuemax="100"></div>
+          </div>
+        </div>
+      </div>
+    </a>
+  </div>
+</div>
+
+<!-- Category Navigation Tabs -->
+<div class="mb-4">
+  <ul class="nav nav-pills custom-category-pills p-1 rounded bg-dark border border-secondary border-opacity-25">
+    <li class="nav-item flex-fill">
+      <a class="nav-link text-center py-2 {% if active_tab == 'coding' %}active fw-bold{% endif %}" href="{{ url_for('admin.questions', tab='coding', assessment_id=selected_assessment_id or '') }}">
+        <i class="bi bi-code-slash me-2"></i>1. Coding
+        <span class="badge ms-2 {% if active_tab == 'coding' %}bg-white text-dark{% else %}bg-secondary text-white{% endif %}">{{ stats.coding.count }}</span>
+      </a>
+    </li>
+    <li class="nav-item flex-fill">
+      <a class="nav-link text-center py-2 {% if active_tab == 'aptitude' %}active fw-bold{% endif %}" href="{{ url_for('admin.questions', tab='aptitude', assessment_id=selected_assessment_id or '') }}">
+        <i class="bi bi-calculator-fill me-2"></i>2. Aptitude
+        <span class="badge ms-2 {% if active_tab == 'aptitude' %}bg-white text-dark{% else %}bg-secondary text-white{% endif %}">{{ stats.aptitude.count }}</span>
+      </a>
+    </li>
+    <li class="nav-item flex-fill">
+      <a class="nav-link text-center py-2 {% if active_tab == 'mcq' %}active fw-bold{% endif %}" href="{{ url_for('admin.questions', tab='mcq', assessment_id=selected_assessment_id or '') }}">
+        <i class="bi bi-ui-checks-grid me-2"></i>3. Technical MCQ
+        <span class="badge ms-2 {% if active_tab == 'mcq' %}bg-white text-dark{% else %}bg-secondary text-white{% endif %}">{{ stats.mcq.count }}</span>
+      </a>
+    </li>
+  </ul>
+</div>
+
+<!-- Search & Filter Controls -->
 <div class="card-dark mb-4 p-3">
   <form method="GET" action="{{ url_for('admin.questions') }}" class="row g-2 align-items-center">
+    <input type="hidden" name="tab" value="{{ active_tab }}">
     <div class="col-md-3">
       <input 
         type="text" 
         name="search" 
         class="form-control form-control-custom form-control-sm" 
-        placeholder="Search question text..."
+        placeholder="{% if active_tab == 'coding' %}Search title or problem...{% else %}Search question text...{% endif %}"
         value="{{ search_query or '' }}">
     </div>
     <div class="col-md-3">
@@ -49,102 +224,307 @@
     </div>
     <div class="col-md-2">
       <select name="category" class="form-select form-select-custom form-select-sm">
-        <option value="">All Categories</option>
+        <option value="">All {% if active_tab == 'aptitude' %}Topics{% else %}Categories{% endif %}</option>
         {% for cat in categories %}
           <option value="{{ cat }}" {% if selected_category == cat %}selected{% endif %}>{{ cat }}</option>
         {% endfor %}
       </select>
     </div>
     <div class="col-md-2 d-flex gap-1">
-      <button type="submit" class="btn btn-primary btn-sm flex-grow-1">Filter</button>
-      <a href="{{ url_for('admin.questions') }}" class="btn btn-outline-secondary btn-sm" title="Clear Filters">
+      <button type="submit" class="btn btn-primary btn-sm flex-grow-1">
+        <i class="bi bi-funnel-fill me-1"></i>Filter
+      </button>
+      <a href="{{ url_for('admin.questions', tab=active_tab) }}" class="btn btn-outline-secondary btn-sm" title="Clear Filters">
         <i class="bi bi-x-lg"></i>
       </a>
     </div>
   </form>
 </div>
 
-<!-- Questions Table -->
+<!-- Category Question Listing -->
 <div class="card-dark">
-  <div class="table-responsive">
-    <table class="table-custom">
-      <thead>
-        <tr>
-          <th style="width: 50px;">#</th>
-          <th>Question</th>
-          <th>Options & Correct Answer</th>
-          <th>Assigned Assessment</th>
-          <th>Category</th>
-          <th>Difficulty</th>
-          <th>Points</th>
-          <th class="text-end">Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for q in questions %}
-        <tr>
-          <td class="text-dim">{{ loop.index }}</td>
-          <td style="max-width: 320px;">
-            <div class="fw-semibold text-white mb-1">{{ q.question_text }}</div>
-            {% if q.explanation %}
-              <div class="text-dim small text-truncate" title="{{ q.explanation }}">
-                <i class="bi bi-info-circle me-1"></i>{{ q.explanation }}
+  {% if active_tab == 'coding' %}
+    <!-- CODING QUESTIONS TABLE -->
+    <div class="table-responsive">
+      <table class="table-custom">
+        <thead>
+          <tr>
+            <th style="width: 45px;">#</th>
+            <th>Coding Challenge</th>
+            <th>Supported Languages</th>
+            <th>Test Cases</th>
+            <th>Assigned Assessment</th>
+            <th>Category</th>
+            <th>Difficulty</th>
+            <th>Marks</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for q in questions %}
+          <tr>
+            <td class="text-dim">{{ loop.index }}</td>
+            <td style="max-width: 320px;">
+              <div class="fw-bold text-white mb-1">{{ q.title }}</div>
+              <div class="text-dim small text-truncate" title="{{ q.problem_statement }}">
+                {{ q.problem_statement[:110] }}{% if q.problem_statement|length > 110 %}...{% endif %}
               </div>
-            {% endif %}
-          </td>
-          <td>
-            <div class="d-flex flex-wrap gap-1 align-items-center">
-              {% for opt in q.options %}
-                <span class="badge {% if opt.id == q.correct_option %}bg-success text-white border border-success{% else %}bg-dark border border-secondary text-dim{% endif %}" style="font-size: 0.75rem;">
-                  {{ opt.id }}: {{ opt.text }}
-                </span>
-              {% endfor %}
-            </div>
-            <small class="text-success fw-bold d-block mt-1">Correct: Option {{ q.correct_option }}</small>
-          </td>
-          <td>
-            {% if q.assessment %}
-              <span class="badge bg-dark border border-secondary text-primary">{{ q.assessment.code }}</span>
-            {% else %}
-              <span class="badge bg-secondary-subtle text-dim">General Pool</span>
-            {% endif %}
-          </td>
-          <td><span class="text-muted small">{{ q.category }}</span></td>
-          <td>
-            {% if q.difficulty == 'EASY' %}
-              <span class="badge bg-success-subtle text-success">EASY</span>
-            {% elif q.difficulty == 'HARD' %}
-              <span class="badge bg-danger-subtle text-danger">HARD</span>
-            {% else %}
-              <span class="badge bg-warning-subtle text-warning">MEDIUM</span>
-            {% endif %}
-          </td>
-          <td><span class="fw-bold text-white">{{ q.points }}</span></td>
-          <td class="text-end">
-            <div class="btn-group btn-group-sm">
-              <a href="{{ url_for('admin.question_edit', question_id=q.id) }}" class="btn btn-outline-secondary" title="Edit Question">
-                <i class="bi bi-pencil"></i>
-              </a>
-              <form method="POST" action="{{ url_for('admin.question_delete', question_id=q.id) }}" class="d-inline" onsubmit="return confirm('Delete this question permanently?');">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="btn btn-outline-danger" title="Delete Question">
-                  <i class="bi bi-trash"></i>
+            </td>
+            <td>
+              <div class="d-flex flex-wrap gap-1">
+                {% if q.languages_supported %}
+                  {% for lang in q.languages_supported %}
+                    <span class="badge bg-dark border border-secondary text-dim" style="font-size: 0.72rem;">{{ lang }}</span>
+                  {% endfor %}
+                {% else %}
+                  <span class="text-muted small">Any</span>
+                {% endif %}
+              </div>
+            </td>
+            <td>
+              {% set tc_count = q.test_cases|length if q.test_cases else 0 %}
+              <span class="badge bg-secondary-subtle text-primary border border-secondary" title="{{ tc_count }} test cases configured">
+                <i class="bi bi-terminal-check me-1"></i>{{ tc_count }} Cases
+              </span>
+            </td>
+            <td>
+              {% if q.assessment %}
+                <span class="badge bg-dark border border-secondary text-primary">{{ q.assessment.code }}</span>
+              {% else %}
+                <span class="badge bg-secondary-subtle text-dim">General Pool</span>
+              {% endif %}
+            </td>
+            <td><span class="text-muted small">{{ q.category }}</span></td>
+            <td>
+              {% if q.difficulty == 'EASY' %}
+                <span class="badge bg-success-subtle text-success">EASY</span>
+              {% elif q.difficulty == 'HARD' %}
+                <span class="badge bg-danger-subtle text-danger">HARD</span>
+              {% else %}
+                <span class="badge bg-warning-subtle text-warning">MEDIUM</span>
+              {% endif %}
+            </td>
+            <td>
+              <span class="badge bg-warning text-dark fw-bold px-2 py-1">15.0</span>
+            </td>
+            <td class="text-end">
+              <div class="btn-group btn-group-sm">
+                <a href="{{ url_for('admin.coding_question_edit', question_id=q.id) }}" class="btn btn-outline-secondary" title="Edit Coding Question">
+                  <i class="bi bi-pencil"></i>
+                </a>
+                <form method="POST" action="{{ url_for('admin.coding_question_delete', question_id=q.id) }}" class="d-inline" onsubmit="return confirm('Delete coding question \'{{ q.title }}\' permanently?');">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit" class="btn btn-outline-danger" title="Delete Question">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="9" class="text-center text-dim py-5">
+              <i class="bi bi-code-square fs-1 d-block mb-2 text-primary opacity-50"></i>
+              No Coding questions found matching criteria.
+              <div class="mt-2">
+                <a href="{{ url_for('admin.coding_question_new') }}" class="btn btn-primary btn-sm me-2">
+                  <i class="bi bi-plus-circle me-1"></i>Add Coding Question
+                </a>
+                <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#uploadJsonModal">
+                  <i class="bi bi-upload me-1"></i>Upload JSON
                 </button>
-              </form>
-            </div>
-          </td>
-        </tr>
-        {% else %}
-        <tr>
-          <td colspan="8" class="text-center text-dim py-5">
-            <i class="bi bi-file-earmark-text fs-1 d-block mb-2"></i>
-            No questions found matching criteria. Click "Upload JSON" to import questions or adjust filters.
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+  {% elif active_tab == 'aptitude' %}
+    <!-- APTITUDE QUESTIONS TABLE -->
+    <div class="table-responsive">
+      <table class="table-custom">
+        <thead>
+          <tr>
+            <th style="width: 45px;">#</th>
+            <th>Question & Topic</th>
+            <th>Four Answer Options & Correct Answer</th>
+            <th>Assigned Assessment</th>
+            <th>Topic</th>
+            <th>Difficulty</th>
+            <th>Marks</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for q in questions %}
+          <tr>
+            <td class="text-dim">{{ loop.index }}</td>
+            <td style="max-width: 300px;">
+              <div class="fw-semibold text-white mb-1">{{ q.question_text }}</div>
+              {% if q.explanation %}
+                <div class="text-dim small text-truncate" title="{{ q.explanation }}">
+                  <i class="bi bi-info-circle me-1 text-info"></i>{{ q.explanation }}
+                </div>
+              {% endif %}
+            </td>
+            <td>
+              <div class="d-flex flex-wrap gap-1 align-items-center">
+                {% for opt in q.options %}
+                  <span class="badge {% if opt.id == q.correct_option %}bg-success text-white border border-success{% else %}bg-dark border border-secondary text-dim{% endif %}" style="font-size: 0.74rem;">
+                    {{ opt.id }}: {{ opt.text }}
+                  </span>
+                {% endfor %}
+              </div>
+              <small class="text-success fw-bold d-block mt-1">Correct: Option {{ q.correct_option }}</small>
+            </td>
+            <td>
+              {% if q.assessment %}
+                <span class="badge bg-dark border border-secondary text-primary">{{ q.assessment.code }}</span>
+              {% else %}
+                <span class="badge bg-secondary-subtle text-dim">General Pool</span>
+              {% endif %}
+            </td>
+            <td><span class="text-muted small">{{ q.category }}</span></td>
+            <td>
+              {% if q.difficulty == 'EASY' %}
+                <span class="badge bg-success-subtle text-success">EASY</span>
+              {% elif q.difficulty == 'HARD' %}
+                <span class="badge bg-danger-subtle text-danger">HARD</span>
+              {% else %}
+                <span class="badge bg-warning-subtle text-warning">MEDIUM</span>
+              {% endif %}
+            </td>
+            <td>
+              <span class="badge bg-info text-dark fw-bold px-2 py-1">2.0</span>
+            </td>
+            <td class="text-end">
+              <div class="btn-group btn-group-sm">
+                <a href="{{ url_for('admin.question_edit', question_id=q.id) }}" class="btn btn-outline-secondary" title="Edit Question">
+                  <i class="bi bi-pencil"></i>
+                </a>
+                <form method="POST" action="{{ url_for('admin.question_delete', question_id=q.id) }}" class="d-inline" onsubmit="return confirm('Delete this aptitude question permanently?');">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit" class="btn btn-outline-danger" title="Delete Question">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="8" class="text-center text-dim py-5">
+              <i class="bi bi-calculator fs-1 d-block mb-2 text-info opacity-50"></i>
+              No Aptitude questions found matching criteria.
+              <div class="mt-2">
+                <a href="{{ url_for('admin.aptitude_question_new') }}" class="btn btn-primary btn-sm me-2">
+                  <i class="bi bi-plus-circle me-1"></i>Add Aptitude Question
+                </a>
+                <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#uploadJsonModal">
+                  <i class="bi bi-upload me-1"></i>Upload JSON
+                </button>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+  {% else %}
+    <!-- TECHNICAL MCQ QUESTIONS TABLE -->
+    <div class="table-responsive">
+      <table class="table-custom">
+        <thead>
+          <tr>
+            <th style="width: 45px;">#</th>
+            <th>Question</th>
+            <th>Options (A, B, C, D) & Answer</th>
+            <th>Assigned Assessment</th>
+            <th>Category</th>
+            <th>Difficulty</th>
+            <th>Marks</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for q in questions %}
+          <tr>
+            <td class="text-dim">{{ loop.index }}</td>
+            <td style="max-width: 320px;">
+              <div class="fw-semibold text-white mb-1">{{ q.question_text }}</div>
+              {% if q.explanation %}
+                <div class="text-dim small text-truncate" title="{{ q.explanation }}">
+                  <i class="bi bi-info-circle me-1"></i>{{ q.explanation }}
+                </div>
+              {% endif %}
+            </td>
+            <td>
+              <div class="d-flex flex-wrap gap-1 align-items-center">
+                {% for opt in q.options %}
+                  <span class="badge {% if opt.id == q.correct_option %}bg-success text-white border border-success{% else %}bg-dark border border-secondary text-dim{% endif %}" style="font-size: 0.74rem;">
+                    {{ opt.id }}: {{ opt.text }}
+                  </span>
+                {% endfor %}
+              </div>
+              <small class="text-success fw-bold d-block mt-1">Correct: Option {{ q.correct_option }}</small>
+            </td>
+            <td>
+              {% if q.assessment %}
+                <span class="badge bg-dark border border-secondary text-primary">{{ q.assessment.code }}</span>
+              {% else %}
+                <span class="badge bg-secondary-subtle text-dim">General Pool</span>
+              {% endif %}
+            </td>
+            <td><span class="text-muted small">{{ q.category }}</span></td>
+            <td>
+              {% if q.difficulty == 'EASY' %}
+                <span class="badge bg-success-subtle text-success">EASY</span>
+              {% elif q.difficulty == 'HARD' %}
+                <span class="badge bg-danger-subtle text-danger">HARD</span>
+              {% else %}
+                <span class="badge bg-warning-subtle text-warning">MEDIUM</span>
+              {% endif %}
+            </td>
+            <td>
+              <span class="badge bg-success text-dark fw-bold px-2 py-1">1.0</span>
+            </td>
+            <td class="text-end">
+              <div class="btn-group btn-group-sm">
+                <a href="{{ url_for('admin.question_edit', question_id=q.id) }}" class="btn btn-outline-secondary" title="Edit MCQ Question">
+                  <i class="bi bi-pencil"></i>
+                </a>
+                <form method="POST" action="{{ url_for('admin.question_delete', question_id=q.id) }}" class="d-inline" onsubmit="return confirm('Delete this technical MCQ question permanently?');">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit" class="btn btn-outline-danger" title="Delete Question">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="8" class="text-center text-dim py-5">
+              <i class="bi bi-file-earmark-text fs-1 d-block mb-2 text-success opacity-50"></i>
+              No Technical MCQ questions found matching criteria.
+              <div class="mt-2">
+                <a href="{{ url_for('admin.mcq_question_new') }}" class="btn btn-primary btn-sm me-2">
+                  <i class="bi bi-plus-circle me-1"></i>Add MCQ Question
+                </a>
+                <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#uploadJsonModal">
+                  <i class="bi bi-upload me-1"></i>Upload JSON
+                </button>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
 </div>
 
 <!-- Upload JSON Modal -->
@@ -160,17 +540,30 @@
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
+          <!-- Category Selection -->
+          <div class="mb-3">
+            <label class="form-label-custom">Select Category <span class="text-danger">*</span></label>
+            <select name="category" class="form-select form-select-custom" required>
+              <option value="coding" {% if active_tab == 'coding' %}selected{% endif %}>Coding (4 Questions | 15 Marks Each | 60 Total)</option>
+              <option value="aptitude" {% if active_tab == 'aptitude' %}selected{% endif %}>Aptitude (10 Questions | 2 Marks Each | 20 Total)</option>
+              <option value="mcq" {% if active_tab == 'mcq' %}selected{% endif %}>Technical MCQ (20 Questions | 1 Mark Each | 20 Total)</option>
+            </select>
+            <div class="form-text text-dim">Validation will strictly enforce the chosen category's schema and marks configuration.</div>
+          </div>
+
+          <!-- Target Assessment -->
           <div class="mb-3">
             <label class="form-label-custom">Target Assessment (Optional)</label>
             <select name="target_assessment_id" class="form-select form-select-custom">
               <option value="">General Pool (Unassigned)</option>
               {% for ass in assessments %}
-                <option value="{{ ass.id }}">{{ ass.title }} ({{ ass.code }})</option>
+                <option value="{{ ass.id }}" {% if selected_assessment_id == ass.id %}selected{% endif %}>{{ ass.title }} ({{ ass.code }})</option>
               {% endfor %}
             </select>
-            <div class="form-text text-dim">You can assign imported questions directly to an assessment.</div>
+            <div class="form-text text-dim">Assign imported questions directly to an assessment.</div>
           </div>
 
+          <!-- JSON File -->
           <div class="mb-3">
             <label class="form-label-custom">Select JSON File <span class="text-danger">*</span></label>
             <input type="file" name="json_file" accept=".json,application/json" class="form-control form-control-custom" required>
@@ -179,7 +572,7 @@
 
           <div class="p-3 bg-dark rounded border border-secondary border-opacity-25 small text-dim">
             <i class="bi bi-info-circle text-primary me-1"></i>
-            Uploaded questions will be parsed, structurally validated, and presented in a preview screen before persisting to the database.
+            Uploaded questions will be parsed, structurally validated, and presented in a preview screen before persisting to the database. Duplicate questions will be detected and skipped.
           </div>
         </div>
         <div class="modal-footer border-secondary">
@@ -192,4 +585,33 @@
     </div>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.custom-category-pills .nav-link {
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
+  transition: all 0.2s ease;
+}
+.custom-category-pills .nav-link:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.05);
+}
+.custom-category-pills .nav-link.active {
+  background: var(--primary);
+  color: #fff;
+  box-shadow: 0 4px 12px var(--primary-glow);
+}
+.transition-hover {
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+.transition-hover:hover {
+  transform: translateY(-2px);
+  border-color: rgba(249, 115, 22, 0.4) !important;
+}
+.tracking-wide {
+  letter-spacing: 0.05em;
+}
+</style>
 {% endblock %}

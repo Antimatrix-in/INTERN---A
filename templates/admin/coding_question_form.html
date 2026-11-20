@@ -1,0 +1,226 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}{% if question %}Edit Coding Question{% else %}Add Coding Question{% endif %} — ANTI-MATRIX Admin{% endblock %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h3 class="fw-bold text-white mb-1">
+      <i class="bi bi-code-slash text-primary me-2"></i>{% if question %}Edit Coding Question{% else %}Add New Coding Question{% endif %}
+    </h3>
+    <p class="text-muted small mb-0">Configure coding challenge parameters, test cases, sample I/O, and programming language support. Fixed at 15 marks per problem.</p>
+  </div>
+  <a href="{{ url_for('admin.questions', tab='coding') }}" class="btn btn-secondary">
+    <i class="bi bi-arrow-left me-1"></i>Back to Coding Questions
+  </a>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-lg-10">
+    <div class="card-dark p-4">
+      <form method="POST" id="codingQuestionForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <!-- Row 1: Title and Target Assessment -->
+        <div class="row g-3 mb-3">
+          <div class="col-md-8">
+            <label class="form-label-custom">Question Title <span class="text-danger">*</span></label>
+            <input 
+              type="text" 
+              name="title" 
+              class="form-control form-control-custom" 
+              placeholder="e.g. Two Sum Target Indices"
+              value="{{ question.title if question else (form_data.get('title') if form_data else '') }}" 
+              required>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label-custom">Assigned Assessment</label>
+            <select name="assessment_id" class="form-select form-select-custom">
+              <option value="">General Question Pool</option>
+              {% for ass in assessments %}
+                <option value="{{ ass.id }}" {% if (question and question.assessment_id == ass.id) or (form_data and form_data.get('assessment_id')|int == ass.id) %}selected{% endif %}>
+                  {{ ass.title }} ({{ ass.code }})
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <!-- Row 2: Difficulty, Category, Marks -->
+        <div class="row g-3 mb-3">
+          <div class="col-md-4">
+            <label class="form-label-custom">Difficulty <span class="text-danger">*</span></label>
+            <select name="difficulty" class="form-select form-select-custom">
+              {% set cur_diff = question.difficulty if question else (form_data.get('difficulty') if form_data else 'MEDIUM') %}
+              <option value="EASY" {% if cur_diff == 'EASY' %}selected{% endif %}>Easy</option>
+              <option value="MEDIUM" {% if cur_diff == 'MEDIUM' %}selected{% endif %}>Medium</option>
+              <option value="HARD" {% if cur_diff == 'HARD' %}selected{% endif %}>Hard</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label-custom">Category / Topic <span class="text-danger">*</span></label>
+            <input 
+              type="text" 
+              name="category" 
+              class="form-control form-control-custom" 
+              placeholder="e.g. Algorithms, Data Structures"
+              value="{{ question.category if question else (form_data.get('category') if form_data else 'Algorithms') }}" 
+              required>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label-custom">Marks (Allocated)</label>
+            <div class="input-group">
+              <input type="text" class="form-control form-control-custom fw-bold text-warning" value="15.0" readonly>
+              <span class="input-group-text bg-dark border-secondary text-dim small">Fixed (Specification)</span>
+            </div>
+            <div class="form-text text-dim">Approved configuration allocates 15 marks per coding problem.</div>
+          </div>
+        </div>
+
+        <!-- Problem Statement -->
+        <div class="mb-3">
+          <label class="form-label-custom">Problem Statement <span class="text-danger">*</span></label>
+          <textarea 
+            name="problem_statement" 
+            rows="5" 
+            class="form-control form-control-custom" 
+            placeholder="Detailed description of the coding challenge..."
+            required>{{ question.problem_statement if question else (form_data.get('problem_statement') if form_data else '') }}</textarea>
+        </div>
+
+        <!-- Input & Output Descriptions -->
+        <div class="row g-3 mb-3">
+          <div class="col-md-6">
+            <label class="form-label-custom">Input Description</label>
+            <textarea 
+              name="input_description" 
+              rows="3" 
+              class="form-control form-control-custom" 
+              placeholder="Format of the input (e.g., First line contains integer N...)">{{ question.input_description if question else (form_data.get('input_description') if form_data else '') }}</textarea>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label-custom">Output Description</label>
+            <textarea 
+              name="output_description" 
+              rows="3" 
+              class="form-control form-control-custom" 
+              placeholder="Format of the expected output...">{{ question.output_description if question else (form_data.get('output_description') if form_data else '') }}</textarea>
+          </div>
+        </div>
+
+        <!-- Constraints -->
+        <div class="mb-3">
+          <label class="form-label-custom">Constraints</label>
+          <textarea 
+            name="constraints" 
+            rows="2" 
+            class="form-control form-control-custom font-monospace" 
+            placeholder="e.g., 1 <= N <= 10^5, -10^9 <= arr[i] <= 10^9">{{ question.constraints if question else (form_data.get('constraints') if form_data else '') }}</textarea>
+        </div>
+
+        <!-- Sample Input & Output -->
+        <div class="row g-3 mb-3">
+          <div class="col-md-6">
+            <label class="form-label-custom">Sample Input</label>
+            <textarea 
+              name="sample_input" 
+              rows="3" 
+              class="form-control form-control-custom font-monospace" 
+              placeholder="4 9&#10;2 7 11 15">{{ question.sample_input if question else (form_data.get('sample_input') if form_data else '') }}</textarea>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label-custom">Sample Output</label>
+            <textarea 
+              name="sample_output" 
+              rows="3" 
+              class="form-control form-control-custom font-monospace" 
+              placeholder="0 1">{{ question.sample_output if question else (form_data.get('sample_output') if form_data else '') }}</textarea>
+          </div>
+        </div>
+
+        <!-- Programming Languages Supported -->
+        <div class="mb-4">
+          <label class="form-label-custom d-block">Programming Languages Supported <span class="text-danger">*</span></label>
+          {% set cur_langs = question.languages_supported if (question and question.languages_supported) else ["Python", "Java", "C++", "JavaScript", "C"] %}
+          <div class="d-flex flex-wrap gap-3 p-3 bg-dark rounded border border-secondary border-opacity-25">
+            {% for lang in ["Python", "Java", "C++", "JavaScript", "C", "Go", "Rust", "C#"] %}
+              <div class="form-check">
+                <input 
+                  class="form-check-input" 
+                  type="checkbox" 
+                  name="languages_supported" 
+                  value="{{ lang }}" 
+                  id="lang_{{ lang }}"
+                  {% if lang in cur_langs %}checked{% endif %}>
+                <label class="form-check-label text-white small" for="lang_{{ lang }}">
+                  {{ lang }}
+                </label>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Test Cases -->
+        <div class="mb-4">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <label class="form-label-custom mb-0">Test Cases (JSON Format) <span class="text-danger">*</span></label>
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="btnFillSampleTestCases">
+              <i class="bi bi-magic me-1"></i>Insert Sample Test Cases
+            </button>
+          </div>
+          {% set tc_json_str = '' %}
+          {% if question and question.test_cases %}
+            {% set tc_json_str = question.test_cases | tojson(indent=2) %}
+          {% elif form_data and form_data.get('test_cases') %}
+            {% set tc_json_str = form_data.get('test_cases') %}
+          {% endif %}
+          <textarea 
+            name="test_cases" 
+            id="testCasesField" 
+            rows="6" 
+            class="form-control form-control-custom font-monospace" 
+            placeholder='[&#10;  {&#10;    "input": "4 9\n2 7 11 15",&#10;    "expected_output": "0 1",&#10;    "is_hidden": false&#10;  },&#10;  {&#10;    "input": "3 6\n3 2 4",&#10;    "expected_output": "1 2",&#10;    "is_hidden": true&#10;  }&#10;]'>{{ tc_json_str }}</textarea>
+          <div class="form-text text-dim">
+            Must be a JSON array of objects with <code>input</code>, <code>expected_output</code>, and optional boolean <code>is_hidden</code>.
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="d-flex justify-content-between align-items-center pt-3 border-top border-secondary border-opacity-25">
+          <a href="{{ url_for('admin.questions', tab='coding') }}" class="btn btn-secondary">Cancel</a>
+          <button type="submit" class="btn btn-primary px-4">
+            <i class="bi bi-check2-circle me-1"></i>{% if question %}Update Coding Question{% else %}Save Coding Question{% endif %}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const btnFill = document.getElementById('btnFillSampleTestCases');
+  const tcField = document.getElementById('testCasesField');
+  
+  if (btnFill && tcField) {
+    btnFill.addEventListener('click', function() {
+      const sample = [
+        {
+          "input": "4 9\n2 7 11 15",
+          "expected_output": "0 1",
+          "is_hidden": false
+        },
+        {
+          "input": "3 6\n3 2 4",
+          "expected_output": "1 2",
+          "is_hidden": true
+        }
+      ];
+      tcField.value = JSON.stringify(sample, null, 2);
+    });
+  }
+});
+</script>
+{% endblock %}

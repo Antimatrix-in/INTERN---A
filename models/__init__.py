@@ -2,6 +2,7 @@ from .database import db
 from .user import User
 from .assessment import Assessment
 from .question import Question
+from .coding_question import CodingQuestion
 from .credential import Credential
 from .attempt import Attempt, AttemptAnswer
 from .result import Result
@@ -12,6 +13,7 @@ __all__ = [
     'User',
     'Assessment',
     'Question',
+    'CodingQuestion',
     'Credential',
     'Attempt',
     'AttemptAnswer',

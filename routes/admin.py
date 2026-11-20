@@ -1,7 +1,7 @@
 import json
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, session, Response
 from flask_login import login_required, current_user
-from models import db, User, Assessment, Question, Credential, Attempt, Result, ProctoringEvent
+from models import db, User, Assessment, Question, CodingQuestion, Credential, Attempt, Result, ProctoringEvent
 from services import (
     admin_required,
     get_admin_dashboard_stats,
@@ -15,7 +15,10 @@ from services import (
     get_sample_json_template,
     parse_and_validate_question_json,
     save_imported_questions,
-    get_questions_query
+    get_question_bank_stats,
+    get_coding_questions_query,
+    get_mcq_questions_query,
+    CATEGORY_CONFIG
 )
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
@@ -123,24 +126,38 @@ def assessment_toggle(assessment_id):
     return redirect(url_for('admin.assessments'))
 
 # -------------------------------------------------------------
-# 3. Question Bank Interface
+# 3. Question Bank Interface (Categorized: Coding, Aptitude, MCQ)
 # -------------------------------------------------------------
 @admin_bp.route('/questions')
 def questions():
+    tab = request.args.get('tab', 'coding').lower()
+    if tab not in ['coding', 'aptitude', 'mcq']:
+        tab = 'coding'
+
     assessment_id = request.args.get('assessment_id', type=int)
     category = request.args.get('category')
     difficulty = request.args.get('difficulty')
     search = request.args.get('search')
 
     all_assessments = Assessment.query.order_by(Assessment.title.asc()).all()
-    questions_list = get_questions_query(assessment_id, category, difficulty, search).all()
+    stats = get_question_bank_stats(assessment_id)
 
-    # Get distinct categories
-    categories = [r[0] for r in db.session.query(Question.category).distinct().filter(Question.category != None).all()]
+    if tab == 'coding':
+        questions_list = get_coding_questions_query(assessment_id, category, difficulty, search).all()
+        categories = [r[0] for r in db.session.query(CodingQuestion.category).distinct().filter(CodingQuestion.category != None).all()]
+    elif tab == 'aptitude':
+        questions_list = get_mcq_questions_query('APTITUDE', assessment_id, category, difficulty, search).all()
+        categories = [r[0] for r in db.session.query(Question.category).filter_by(section='APTITUDE').distinct().filter(Question.category != None).all()]
+    else: # tab == 'mcq'
+        questions_list = get_mcq_questions_query('MCQ', assessment_id, category, difficulty, search).all()
+        categories = [r[0] for r in db.session.query(Question.category).filter_by(section='MCQ').distinct().filter(Question.category != None).all()]
 
     return render_template(
         'admin/question_bank.html',
+        active_tab=tab,
         questions=questions_list,
+        stats=stats,
+        category_config=CATEGORY_CONFIG.get(tab),
         assessments=all_assessments,
         selected_assessment_id=assessment_id,
         categories=categories,
@@ -151,40 +168,55 @@ def questions():
 
 @admin_bp.route('/questions/template')
 def question_template():
-    """Download the official documented JSON question template."""
-    template_data = get_sample_json_template()
+    """Download the official documented JSON question template per category."""
+    category = request.args.get('category', 'mcq').lower()
+    if category not in ['coding', 'aptitude', 'mcq']:
+        category = 'mcq'
+
+    filename_map = {
+        'coding': 'coding_questions_template.json',
+        'aptitude': 'aptitude_questions_template.json',
+        'mcq': 'mcq_questions_template.json'
+    }
+    filename = filename_map.get(category, 'mcq_questions_template.json')
+    template_data = get_sample_json_template(category)
     json_str = json.dumps(template_data, indent=2)
     return Response(
         json_str,
         mimetype="application/json",
-        headers={"Content-Disposition": "attachment;filename=antimatrix_question_template.json"}
+        headers={"Content-Disposition": f"attachment;filename={filename}"}
     )
 
 @admin_bp.route('/questions/upload', methods=['POST'])
 def question_upload():
+    category = request.form.get('category', 'mcq').lower()
+    if category not in ['coding', 'aptitude', 'mcq']:
+        category = 'mcq'
+
     if 'json_file' not in request.files:
         flash("No file was selected for upload.", "danger")
-        return redirect(url_for('admin.questions'))
+        return redirect(url_for('admin.questions', tab=category))
 
     file = request.files['json_file']
     if file.filename == '':
         flash("Please select a valid JSON file.", "danger")
-        return redirect(url_for('admin.questions'))
+        return redirect(url_for('admin.questions', tab=category))
 
     assessment_id = request.form.get('target_assessment_id', type=int)
 
     try:
         content = file.read()
-        sanitized_questions, errors = parse_and_validate_question_json(content)
+        sanitized_questions, errors = parse_and_validate_question_json(content, category=category)
         if errors:
             for err in errors[:5]: # show first 5 errors to avoid huge banner
                 flash(err, "danger")
             if len(errors) > 5:
                 flash(f"...and {len(errors) - 5} more validation errors.", "danger")
-            return redirect(url_for('admin.questions'))
+            return redirect(url_for('admin.questions', tab=category))
 
         # Store in session for preview screen
         session['question_upload_staging'] = {
+            'category': category,
             'questions': sanitized_questions,
             'assessment_id': assessment_id,
             'filename': file.filename
@@ -193,7 +225,7 @@ def question_upload():
 
     except Exception as e:
         flash(f"Error reading uploaded file: {str(e)}", "danger")
-        return redirect(url_for('admin.questions'))
+        return redirect(url_for('admin.questions', tab=category))
 
 @admin_bp.route('/questions/preview')
 def question_preview():
@@ -206,8 +238,13 @@ def question_preview():
     if staging.get('assessment_id'):
         target_assessment = Assessment.query.get(staging['assessment_id'])
 
+    category = staging.get('category', 'mcq')
+    category_info = CATEGORY_CONFIG.get(category, CATEGORY_CONFIG['mcq'])
+
     return render_template(
         'admin/question_preview.html',
+        category=category,
+        category_info=category_info,
         questions=staging['questions'],
         assessment=target_assessment,
         filename=staging.get('filename')
@@ -220,28 +257,271 @@ def question_save_batch():
         flash("Staged questions have expired or were already saved.", "warning")
         return redirect(url_for('admin.questions'))
 
+    category = staging.get('category', 'mcq')
     assessment_id = staging.get('assessment_id')
-    saved_count, error = save_imported_questions(staging['questions'], assessment_id=assessment_id)
+    saved_count, error = save_imported_questions(staging['questions'], category=category, assessment_id=assessment_id)
 
     if error:
         flash(error, "danger")
         return redirect(url_for('admin.question_preview'))
 
     session.pop('question_upload_staging', None)
-    flash(f"Successfully validated and saved {saved_count} questions into the question bank.", "success")
-    return redirect(url_for('admin.questions', assessment_id=assessment_id if assessment_id else ''))
+    cat_name = CATEGORY_CONFIG.get(category, {}).get('name', 'Questions')
+    flash(f"Successfully validated and saved {saved_count} {cat_name} questions into the question bank.", "success")
+    return redirect(url_for('admin.questions', tab=category, assessment_id=assessment_id if assessment_id else ''))
+
+# -------------------------------------------------------------
+# Coding Questions Add / Edit / Delete
+# -------------------------------------------------------------
+@admin_bp.route('/questions/coding/new', methods=['GET', 'POST'])
+def coding_question_new():
+    all_assessments = Assessment.query.order_by(Assessment.title.asc()).all()
+    if request.method == 'POST':
+        title = request.form.get('title', '').strip()
+        problem_statement = request.form.get('problem_statement', '').strip()
+        input_description = request.form.get('input_description', '').strip()
+        output_description = request.form.get('output_description', '').strip()
+        constraints = request.form.get('constraints', '').strip()
+        sample_input = request.form.get('sample_input', '').strip()
+        sample_output = request.form.get('sample_output', '').strip()
+        difficulty = request.form.get('difficulty', 'MEDIUM').strip()
+        category = request.form.get('category', 'Algorithms').strip()
+        assessment_id = request.form.get('assessment_id', type=int)
+
+        # Languages supported
+        langs_input = request.form.getlist('languages_supported')
+        if not langs_input:
+            raw_langs = request.form.get('languages_custom', '')
+            if raw_langs:
+                langs_input = [x.strip() for x in raw_langs.split(',') if x.strip()]
+            else:
+                langs_input = ["Python", "Java", "C++", "JavaScript", "C"]
+
+        # Test cases
+        test_cases_raw = request.form.get('test_cases', '').strip()
+        test_cases = []
+        if test_cases_raw:
+            try:
+                test_cases = json.loads(test_cases_raw)
+                if not isinstance(test_cases, list):
+                    flash("Test cases must be a JSON array of objects with 'input' and 'expected_output'.", "danger")
+                    return render_template('admin/coding_question_form.html', question=None, assessments=all_assessments, form_data=request.form)
+            except Exception as e:
+                flash(f"Invalid JSON format for test cases: {str(e)}", "danger")
+                return render_template('admin/coding_question_form.html', question=None, assessments=all_assessments, form_data=request.form)
+
+        if not test_cases:
+            if sample_input and sample_output:
+                test_cases = [{"input": sample_input, "expected_output": sample_output, "is_hidden": False}]
+            else:
+                flash("At least one test case or sample input/output is required.", "danger")
+                return render_template('admin/coding_question_form.html', question=None, assessments=all_assessments, form_data=request.form)
+
+        if not title or len(title) < 3:
+            flash("Title must be at least 3 characters long.", "danger")
+            return render_template('admin/coding_question_form.html', question=None, assessments=all_assessments, form_data=request.form)
+
+        if not problem_statement or len(problem_statement) < 10:
+            flash("Problem statement must be at least 10 characters long.", "danger")
+            return render_template('admin/coding_question_form.html', question=None, assessments=all_assessments, form_data=request.form)
+
+        coding_q = CodingQuestion(
+            title=title,
+            problem_statement=problem_statement,
+            input_description=input_description,
+            output_description=output_description,
+            constraints=constraints,
+            sample_input=sample_input,
+            sample_output=sample_output,
+            languages_supported=langs_input,
+            test_cases=test_cases,
+            points=15.0, # Strictly 15 marks
+            difficulty=difficulty,
+            category=category,
+            assessment_id=assessment_id if assessment_id else None,
+            section='CODING',
+            is_active=True
+        )
+        db.session.add(coding_q)
+        db.session.commit()
+        flash("Coding question created successfully (15 marks allocated).", "success")
+        return redirect(url_for('admin.questions', tab='coding'))
+
+    return render_template('admin/coding_question_form.html', question=None, assessments=all_assessments, form_data={})
+
+@admin_bp.route('/questions/coding/<int:question_id>/edit', methods=['GET', 'POST'])
+def coding_question_edit(question_id):
+    question = CodingQuestion.query.get_or_404(question_id)
+    all_assessments = Assessment.query.order_by(Assessment.title.asc()).all()
+
+    if request.method == 'POST':
+        title = request.form.get('title', '').strip()
+        problem_statement = request.form.get('problem_statement', '').strip()
+        input_description = request.form.get('input_description', '').strip()
+        output_description = request.form.get('output_description', '').strip()
+        constraints = request.form.get('constraints', '').strip()
+        sample_input = request.form.get('sample_input', '').strip()
+        sample_output = request.form.get('sample_output', '').strip()
+        difficulty = request.form.get('difficulty', 'MEDIUM').strip()
+        category = request.form.get('category', 'Algorithms').strip()
+        assessment_id = request.form.get('assessment_id', type=int)
+
+        langs_input = request.form.getlist('languages_supported')
+        if not langs_input:
+            raw_langs = request.form.get('languages_custom', '')
+            if raw_langs:
+                langs_input = [x.strip() for x in raw_langs.split(',') if x.strip()]
+            else:
+                langs_input = question.languages_supported or ["Python", "Java", "C++"]
+
+        test_cases_raw = request.form.get('test_cases', '').strip()
+        test_cases = question.test_cases or []
+        if test_cases_raw:
+            try:
+                test_cases = json.loads(test_cases_raw)
+                if not isinstance(test_cases, list):
+                    flash("Test cases must be a JSON array of objects.", "danger")
+                    return render_template('admin/coding_question_form.html', question=question, assessments=all_assessments, form_data=request.form)
+            except Exception as e:
+                flash(f"Invalid JSON format for test cases: {str(e)}", "danger")
+                return render_template('admin/coding_question_form.html', question=question, assessments=all_assessments, form_data=request.form)
+
+        question.title = title
+        question.problem_statement = problem_statement
+        question.input_description = input_description
+        question.output_description = output_description
+        question.constraints = constraints
+        question.sample_input = sample_input
+        question.sample_output = sample_output
+        question.languages_supported = langs_input
+        question.test_cases = test_cases
+        question.points = 15.0 # Strict
+        question.difficulty = difficulty
+        question.category = category
+        question.assessment_id = assessment_id if assessment_id else None
+
+        db.session.commit()
+        flash("Coding question updated successfully.", "success")
+        return redirect(url_for('admin.questions', tab='coding'))
+
+    return render_template('admin/coding_question_form.html', question=question, assessments=all_assessments, form_data={})
+
+@admin_bp.route('/questions/coding/<int:question_id>/delete', methods=['POST'])
+def coding_question_delete(question_id):
+    question = CodingQuestion.query.get_or_404(question_id)
+    db.session.delete(question)
+    db.session.commit()
+    flash("Coding question deleted successfully.", "info")
+    return redirect(url_for('admin.questions', tab='coding'))
+
+# -------------------------------------------------------------
+# Aptitude & Technical MCQ Add / Edit / Delete
+# -------------------------------------------------------------
+@admin_bp.route('/questions/aptitude/new', methods=['GET', 'POST'])
+def aptitude_question_new():
+    all_assessments = Assessment.query.order_by(Assessment.title.asc()).all()
+    if request.method == 'POST':
+        question_text = request.form.get('question_text', '').strip()
+        topic = request.form.get('category', 'General Aptitude').strip()
+        difficulty = request.form.get('difficulty', 'MEDIUM')
+        correct_option = request.form.get('correct_option', 'A').strip().upper()
+        explanation = request.form.get('explanation', '').strip()
+        assessment_id = request.form.get('assessment_id', type=int)
+
+        options = [
+            {"id": "A", "text": request.form.get('opt_A', '').strip()},
+            {"id": "B", "text": request.form.get('opt_B', '').strip()},
+            {"id": "C", "text": request.form.get('opt_C', '').strip()},
+            {"id": "D", "text": request.form.get('opt_D', '').strip()}
+        ]
+
+        if not question_text or len(question_text) < 5:
+            flash("Question text must be at least 5 characters.", "danger")
+            return render_template('admin/question_form.html', question=None, section='APTITUDE', assessments=all_assessments, form_data=request.form)
+
+        for opt in options:
+            if not opt['text']:
+                flash(f"Option {opt['id']} text is required.", "danger")
+                return render_template('admin/question_form.html', question=None, section='APTITUDE', assessments=all_assessments, form_data=request.form)
+
+        q = Question(
+            question_text=question_text,
+            question_type='MCQ',
+            section='APTITUDE',
+            options=options,
+            correct_option=correct_option,
+            explanation=explanation,
+            points=2.0, # Strictly 2 marks for Aptitude
+            difficulty=difficulty,
+            category=topic,
+            assessment_id=assessment_id if assessment_id else None,
+            is_active=True
+        )
+        db.session.add(q)
+        db.session.commit()
+        flash("Aptitude question created successfully (2 marks allocated).", "success")
+        return redirect(url_for('admin.questions', tab='aptitude'))
+
+    return render_template('admin/question_form.html', question=None, section='APTITUDE', assessments=all_assessments, form_data={})
+
+@admin_bp.route('/questions/mcq/new', methods=['GET', 'POST'])
+def mcq_question_new():
+    all_assessments = Assessment.query.order_by(Assessment.title.asc()).all()
+    if request.method == 'POST':
+        question_text = request.form.get('question_text', '').strip()
+        category = request.form.get('category', 'General').strip()
+        difficulty = request.form.get('difficulty', 'MEDIUM')
+        correct_option = request.form.get('correct_option', 'A').strip().upper()
+        explanation = request.form.get('explanation', '').strip()
+        assessment_id = request.form.get('assessment_id', type=int)
+
+        options = [
+            {"id": "A", "text": request.form.get('opt_A', '').strip()},
+            {"id": "B", "text": request.form.get('opt_B', '').strip()},
+            {"id": "C", "text": request.form.get('opt_C', '').strip()},
+            {"id": "D", "text": request.form.get('opt_D', '').strip()}
+        ]
+
+        if not question_text or len(question_text) < 5:
+            flash("Question text must be at least 5 characters.", "danger")
+            return render_template('admin/question_form.html', question=None, section='MCQ', assessments=all_assessments, form_data=request.form)
+
+        for opt in options:
+            if not opt['text']:
+                flash(f"Option {opt['id']} text is required.", "danger")
+                return render_template('admin/question_form.html', question=None, section='MCQ', assessments=all_assessments, form_data=request.form)
+
+        q = Question(
+            question_text=question_text,
+            question_type='MCQ',
+            section='MCQ',
+            options=options,
+            correct_option=correct_option,
+            explanation=explanation,
+            points=1.0, # Strictly 1 mark for Technical MCQ
+            difficulty=difficulty,
+            category=category,
+            assessment_id=assessment_id if assessment_id else None,
+            is_active=True
+        )
+        db.session.add(q)
+        db.session.commit()
+        flash("Technical MCQ question created successfully (1 mark allocated).", "success")
+        return redirect(url_for('admin.questions', tab='mcq'))
+
+    return render_template('admin/question_form.html', question=None, section='MCQ', assessments=all_assessments, form_data={})
 
 @admin_bp.route('/questions/<int:question_id>/edit', methods=['GET', 'POST'])
 def question_edit(question_id):
     question = Question.query.get_or_404(question_id)
     all_assessments = Assessment.query.order_by(Assessment.title.asc()).all()
+    section = question.section or 'MCQ'
 
     if request.method == 'POST':
         question_text = request.form.get('question_text')
         assessment_id = request.form.get('assessment_id', type=int)
         difficulty = request.form.get('difficulty', 'MEDIUM')
         category = request.form.get('category', 'General')
-        points = float(request.form.get('points', 1.0))
         correct_option = request.form.get('correct_option', 'A')
         explanation = request.form.get('explanation', '')
 
@@ -263,23 +543,26 @@ def question_edit(question_id):
         question.options = options
         question.correct_option = correct_option
         question.explanation = explanation
-        question.points = points
+        # Fixed points: 2.0 for Aptitude, 1.0 for MCQ
+        question.points = 2.0 if question.section == 'APTITUDE' else 1.0
         question.difficulty = difficulty
         question.category = category
 
         db.session.commit()
-        flash("Question updated successfully.", "success")
-        return redirect(url_for('admin.questions'))
+        cat_tab = 'aptitude' if question.section == 'APTITUDE' else 'mcq'
+        flash(f"{'Aptitude' if question.section == 'APTITUDE' else 'MCQ'} question updated successfully.", "success")
+        return redirect(url_for('admin.questions', tab=cat_tab))
 
-    return render_template('admin/question_form.html', question=question, assessments=all_assessments)
+    return render_template('admin/question_form.html', question=question, section=section, assessments=all_assessments)
 
 @admin_bp.route('/questions/<int:question_id>/delete', methods=['POST'])
 def question_delete(question_id):
     question = Question.query.get_or_404(question_id)
+    cat_tab = 'aptitude' if question.section == 'APTITUDE' else 'mcq'
     db.session.delete(question)
     db.session.commit()
-    flash("Question successfully deleted from the bank.", "info")
-    return redirect(url_for('admin.questions'))
+    flash(f"{'Aptitude' if cat_tab == 'aptitude' else 'MCQ'} question successfully deleted from the bank.", "info")
+    return redirect(url_for('admin.questions', tab=cat_tab))
 
 # -------------------------------------------------------------
 # 4. Credential Manager (Core Feature)
@@ -352,7 +635,6 @@ def credential_confirm(credential_id):
     """Candidate credential creation confirmation screen with one-time visible password."""
     cred_data = session.get('latest_created_credential')
     if not cred_data or cred_data.get('credential_id') != credential_id:
-        # Fallback to fetching basic record (password hash is not exposed)
         cred = Credential.query.get_or_404(credential_id)
         cred_data = {
             'credential_id': cred.id,
@@ -378,7 +660,6 @@ def credential_regenerate(credential_id):
         flash(error, "danger")
         return redirect(url_for('admin.credentials'))
 
-    # Store for confirmation screen
     session['latest_created_credential'] = {
         'credential_id': cred.id,
         'credential_key': cred.credential_key,

@@ -8,12 +8,13 @@ class Question(db.Model):
     assessment_id = db.Column(db.Integer, db.ForeignKey('assessments.id', ondelete='CASCADE'), nullable=True, index=True)
     question_text = db.Column(db.Text, nullable=False)
     question_type = db.Column(db.String(20), nullable=False, default='MCQ') # MCQ
+    section = db.Column(db.String(20), nullable=False, default='MCQ', server_default='MCQ', index=True) # 'MCQ' or 'APTITUDE'
     options = db.Column(db.JSON, nullable=False) # e.g. [{"id": "A", "text": "Option A"}, ...]
     correct_option = db.Column(db.String(10), nullable=False) # "A", "B", "C", "D"
     explanation = db.Column(db.Text, nullable=True)
-    points = db.Column(db.Float, nullable=False, default=1.0)
+    points = db.Column(db.Float, nullable=False, default=1.0) # MCQ: 1.0, Aptitude: 2.0
     difficulty = db.Column(db.String(20), nullable=False, default='MEDIUM') # EASY, MEDIUM, HARD
-    category = db.Column(db.String(64), nullable=False, default='General')
+    category = db.Column(db.String(64), nullable=False, default='General') # Topic for Aptitude, Category for MCQ
     is_active = db.Column(db.Boolean, nullable=False, default=True, index=True)
     created_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
@@ -30,6 +31,7 @@ class Question(db.Model):
             'assessment_title': self.assessment.title if self.assessment else 'General Pool',
             'question_text': self.question_text,
             'question_type': self.question_type,
+            'section': self.section,
             'options': self.options,
             'points': self.points,
             'difficulty': self.difficulty,
@@ -43,4 +45,4 @@ class Question(db.Model):
         return data
 
     def __repr__(self):
-        return f"<Question {self.id}: {self.question_text[:30]}>"
+        return f"<Question {self.id} [{self.section}]: {self.question_text[:30]}>"
