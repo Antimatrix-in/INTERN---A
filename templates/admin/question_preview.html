@@ -1,0 +1,90 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}Preview Staged Questions — ANTI-MATRIX Admin{% endblock %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h3 class="fw-bold text-white mb-1">Preview Staged Questions</h3>
+    <p class="text-muted small mb-0">
+      Review parsed questions from <code>{{ filename }}</code> before committing them to the Question Bank.
+      {% if assessment %}
+        Target Assessment: <span class="badge bg-primary">{{ assessment.title }} ({{ assessment.code }})</span>
+      {% else %}
+        Target: <span class="badge bg-secondary">General Question Pool</span>
+      {% endif %}
+    </p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('admin.questions') }}" class="btn btn-secondary">
+      <i class="bi bi-x-circle me-1"></i>Discard & Cancel
+    </a>
+    <form method="POST" action="{{ url_for('admin.question_save_batch') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn btn-success">
+        <i class="bi bi-check2-all me-1"></i>Confirm & Save {{ questions|length }} Questions
+      </button>
+    </form>
+  </div>
+</div>
+
+<div class="card-dark">
+  <div class="table-responsive">
+    <table class="table-custom">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Question Text</th>
+          <th>Options</th>
+          <th>Correct</th>
+          <th>Difficulty</th>
+          <th>Points</th>
+          <th>Category</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for q in questions %}
+        <tr>
+          <td class="text-dim">{{ loop.index }}</td>
+          <td style="max-width: 320px;">
+            <div class="fw-semibold text-white mb-1">{{ q.question_text }}</div>
+            {% if q.explanation %}
+              <div class="text-dim small"><i class="bi bi-lightbulb text-warning me-1"></i>{{ q.explanation }}</div>
+            {% endif %}
+          </td>
+          <td>
+            <div class="d-flex flex-column gap-1">
+              {% for opt in q.options %}
+                <span class="small {% if opt.id == q.correct_option %}text-success fw-bold{% else %}text-muted{% endif %}">
+                  {{ opt.id }}) {{ opt.text }}
+                </span>
+              {% endfor %}
+            </div>
+          </td>
+          <td>
+            <span class="badge bg-success-subtle text-success border border-success border-opacity-25 px-2 py-1">
+              Option {{ q.correct_option }}
+            </span>
+          </td>
+          <td>
+            <span class="badge bg-dark border border-secondary text-dim">{{ q.difficulty }}</span>
+          </td>
+          <td class="fw-bold text-white">{{ q.points }}</td>
+          <td class="text-dim small">{{ q.category }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="mt-4 pt-3 border-top border-secondary border-opacity-25 d-flex justify-content-between align-items-center">
+    <span class="text-muted small">All {{ questions|length }} questions passed structural schema validation.</span>
+    <form method="POST" action="{{ url_for('admin.question_save_batch') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn btn-primary">
+        <i class="bi bi-save2-fill me-1"></i>Commit & Persist to Database
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}

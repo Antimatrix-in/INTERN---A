@@ -1,0 +1,81 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}Examination Results — ANTI-MATRIX Admin{% endblock %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h3 class="fw-bold text-white mb-1">Examination Results</h3>
+    <p class="text-muted small mb-0">Scored candidate assessment attempts, objective MCQ marks, and pass/fail determinations.</p>
+  </div>
+</div>
+
+<div class="card-dark">
+  <div class="table-responsive">
+    <table class="table-custom">
+      <thead>
+        <tr>
+          <th>Candidate</th>
+          <th>User ID</th>
+          <th>Assessment</th>
+          <th>Questions</th>
+          <th>Score</th>
+          <th>Percentage</th>
+          <th>Pass Mark</th>
+          <th>Verdict</th>
+          <th>Submitted At (UTC)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for res in results %}
+        <tr>
+          <td>
+            <div class="fw-bold text-white">{{ res.candidate.full_name }}</div>
+            <div class="text-dim small">{{ res.candidate.email }}</div>
+          </td>
+          <td>
+            <code class="text-info fw-bold">{{ res.candidate.user_id }}</code>
+          </td>
+          <td>
+            <span class="badge bg-dark border border-secondary text-primary font-monospace">{{ res.assessment.code }}</span>
+          </td>
+          <td>
+            <span class="text-white">{{ res.answered_questions }} / {{ res.total_questions }}</span>
+            <small class="text-dim d-block">({{ res.correct_answers }} correct)</small>
+          </td>
+          <td>
+            <span class="fw-bold text-white">{{ res.score }}</span>
+            <span class="text-dim small">/ {{ res.max_score }}</span>
+          </td>
+          <td>
+            <span class="fw-bold fs-6 {{ 'text-success' if res.passed else 'text-danger' }}">
+              {{ res.percentage }}%
+            </span>
+          </td>
+          <td class="text-dim small">{{ res.assessment.pass_percentage }}%</td>
+          <td>
+            {% if res.passed %}
+              <span class="badge bg-success-subtle text-success border border-success border-opacity-25 px-2 py-1">
+                <i class="bi bi-check-circle-fill me-1"></i>PASSED
+              </span>
+            {% else %}
+              <span class="badge bg-danger-subtle text-danger border border-danger border-opacity-25 px-2 py-1">
+                <i class="bi bi-x-circle-fill me-1"></i>FAILED
+              </span>
+            {% endif %}
+          </td>
+          <td class="text-dim small">{{ res.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="9" class="text-center text-dim py-5">
+            <i class="bi bi-clipboard2-data fs-1 d-block mb-2"></i>
+            No candidate results submitted yet. Results appear immediately after exam submission.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

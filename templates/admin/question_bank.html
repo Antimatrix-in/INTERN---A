@@ -1,0 +1,195 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}Question Bank — ANTI-MATRIX Admin{% endblock %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h3 class="fw-bold text-white mb-1">Question Bank</h3>
+    <p class="text-muted small mb-0">Manage multiple-choice questions, validate and import structured JSON question sets.</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('admin.question_template') }}" class="btn btn-outline-secondary" title="Download documented JSON schema template">
+      <i class="bi bi-download me-1"></i>JSON Template
+    </a>
+    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#uploadJsonModal">
+      <i class="bi bi-file-earmark-arrow-up-fill me-1"></i>Upload JSON
+    </button>
+  </div>
+</div>
+
+<!-- Search & Filters -->
+<div class="card-dark mb-4 p-3">
+  <form method="GET" action="{{ url_for('admin.questions') }}" class="row g-2 align-items-center">
+    <div class="col-md-3">
+      <input 
+        type="text" 
+        name="search" 
+        class="form-control form-control-custom form-control-sm" 
+        placeholder="Search question text..."
+        value="{{ search_query or '' }}">
+    </div>
+    <div class="col-md-3">
+      <select name="assessment_id" class="form-select form-select-custom form-select-sm">
+        <option value="">All Assessments</option>
+        {% for ass in assessments %}
+          <option value="{{ ass.id }}" {% if selected_assessment_id == ass.id %}selected{% endif %}>
+            {{ ass.title }} ({{ ass.code }})
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <select name="difficulty" class="form-select form-select-custom form-select-sm">
+        <option value="">All Difficulties</option>
+        <option value="EASY" {% if selected_difficulty == 'EASY' %}selected{% endif %}>Easy</option>
+        <option value="MEDIUM" {% if selected_difficulty == 'MEDIUM' %}selected{% endif %}>Medium</option>
+        <option value="HARD" {% if selected_difficulty == 'HARD' %}selected{% endif %}>Hard</option>
+      </select>
+    </div>
+    <div class="col-md-2">
+      <select name="category" class="form-select form-select-custom form-select-sm">
+        <option value="">All Categories</option>
+        {% for cat in categories %}
+          <option value="{{ cat }}" {% if selected_category == cat %}selected{% endif %}>{{ cat }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2 d-flex gap-1">
+      <button type="submit" class="btn btn-primary btn-sm flex-grow-1">Filter</button>
+      <a href="{{ url_for('admin.questions') }}" class="btn btn-outline-secondary btn-sm" title="Clear Filters">
+        <i class="bi bi-x-lg"></i>
+      </a>
+    </div>
+  </form>
+</div>
+
+<!-- Questions Table -->
+<div class="card-dark">
+  <div class="table-responsive">
+    <table class="table-custom">
+      <thead>
+        <tr>
+          <th style="width: 50px;">#</th>
+          <th>Question</th>
+          <th>Options & Correct Answer</th>
+          <th>Assigned Assessment</th>
+          <th>Category</th>
+          <th>Difficulty</th>
+          <th>Points</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for q in questions %}
+        <tr>
+          <td class="text-dim">{{ loop.index }}</td>
+          <td style="max-width: 320px;">
+            <div class="fw-semibold text-white mb-1">{{ q.question_text }}</div>
+            {% if q.explanation %}
+              <div class="text-dim small text-truncate" title="{{ q.explanation }}">
+                <i class="bi bi-info-circle me-1"></i>{{ q.explanation }}
+              </div>
+            {% endif %}
+          </td>
+          <td>
+            <div class="d-flex flex-wrap gap-1 align-items-center">
+              {% for opt in q.options %}
+                <span class="badge {% if opt.id == q.correct_option %}bg-success text-white border border-success{% else %}bg-dark border border-secondary text-dim{% endif %}" style="font-size: 0.75rem;">
+                  {{ opt.id }}: {{ opt.text }}
+                </span>
+              {% endfor %}
+            </div>
+            <small class="text-success fw-bold d-block mt-1">Correct: Option {{ q.correct_option }}</small>
+          </td>
+          <td>
+            {% if q.assessment %}
+              <span class="badge bg-dark border border-secondary text-primary">{{ q.assessment.code }}</span>
+            {% else %}
+              <span class="badge bg-secondary-subtle text-dim">General Pool</span>
+            {% endif %}
+          </td>
+          <td><span class="text-muted small">{{ q.category }}</span></td>
+          <td>
+            {% if q.difficulty == 'EASY' %}
+              <span class="badge bg-success-subtle text-success">EASY</span>
+            {% elif q.difficulty == 'HARD' %}
+              <span class="badge bg-danger-subtle text-danger">HARD</span>
+            {% else %}
+              <span class="badge bg-warning-subtle text-warning">MEDIUM</span>
+            {% endif %}
+          </td>
+          <td><span class="fw-bold text-white">{{ q.points }}</span></td>
+          <td class="text-end">
+            <div class="btn-group btn-group-sm">
+              <a href="{{ url_for('admin.question_edit', question_id=q.id) }}" class="btn btn-outline-secondary" title="Edit Question">
+                <i class="bi bi-pencil"></i>
+              </a>
+              <form method="POST" action="{{ url_for('admin.question_delete', question_id=q.id) }}" class="d-inline" onsubmit="return confirm('Delete this question permanently?');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-outline-danger" title="Delete Question">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="8" class="text-center text-dim py-5">
+            <i class="bi bi-file-earmark-text fs-1 d-block mb-2"></i>
+            No questions found matching criteria. Click "Upload JSON" to import questions or adjust filters.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Upload JSON Modal -->
+<div class="modal fade" id="uploadJsonModal" tabindex="-1" aria-labelledby="uploadJsonModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content bg-card border-secondary text-white">
+      <form method="POST" action="{{ url_for('admin.question_upload') }}" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="modal-header border-secondary">
+          <h5 class="modal-title fw-bold" id="uploadJsonModalLabel">
+            <i class="bi bi-upload text-primary me-2"></i>Import Questions via JSON
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label-custom">Target Assessment (Optional)</label>
+            <select name="target_assessment_id" class="form-select form-select-custom">
+              <option value="">General Pool (Unassigned)</option>
+              {% for ass in assessments %}
+                <option value="{{ ass.id }}">{{ ass.title }} ({{ ass.code }})</option>
+              {% endfor %}
+            </select>
+            <div class="form-text text-dim">You can assign imported questions directly to an assessment.</div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label-custom">Select JSON File <span class="text-danger">*</span></label>
+            <input type="file" name="json_file" accept=".json,application/json" class="form-control form-control-custom" required>
+            <div class="form-text text-dim">Must follow documented schema array format. File max 5MB.</div>
+          </div>
+
+          <div class="p-3 bg-dark rounded border border-secondary border-opacity-25 small text-dim">
+            <i class="bi bi-info-circle text-primary me-1"></i>
+            Uploaded questions will be parsed, structurally validated, and presented in a preview screen before persisting to the database.
+          </div>
+        </div>
+        <div class="modal-footer border-secondary">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-eye me-1"></i>Validate & Preview
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

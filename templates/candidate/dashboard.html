@@ -1,0 +1,223 @@
+{% extends "candidate/base_candidate.html" %}
+
+{% block title %}Candidate Dashboard — ANTI-MATRIX{% endblock %}
+
+{% block candidate_content %}
+<div class="row g-4 justify-content-center">
+  <!-- Left Column: Assessment & Candidate Profile -->
+  <div class="col-lg-8">
+    <div class="card-dark mb-4">
+      <!-- Profile Header -->
+      <div class="d-flex justify-content-between align-items-start border-bottom border-secondary border-opacity-50 pb-3 mb-4">
+        <div>
+          <span class="text-dim text-uppercase small fw-bold">Candidate Profile</span>
+          <h3 class="fw-bold text-white mb-0">{{ candidate.full_name }}</h3>
+          <div class="text-muted small">{{ candidate.email }}</div>
+        </div>
+        <div class="text-end">
+          <span class="text-dim text-uppercase small fw-bold d-block">Candidate User ID</span>
+          <code class="fs-5 text-info fw-bold">{{ candidate.user_id }}</code>
+        </div>
+      </div>
+
+      {% if assessment %}
+        <!-- Assessment Overview -->
+        <div class="mb-4">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="badge bg-dark border border-secondary text-primary font-monospace fs-6">
+              {{ assessment.code }}
+            </span>
+            {% if assessment.is_active %}
+              <span class="badge bg-success-subtle text-success border border-success border-opacity-25 px-2 py-1">
+                <i class="bi bi-broadcast me-1"></i>Assessment Available
+              </span>
+            {% else %}
+              <span class="badge bg-warning-subtle text-warning border border-warning border-opacity-25 px-2 py-1">
+                <i class="bi bi-pause-circle me-1"></i>Assessment Inactive
+              </span>
+            {% endif %}
+          </div>
+
+          <h4 class="fw-bold text-white mb-2">{{ assessment.title }}</h4>
+          <p class="text-muted small">
+            {{ assessment.description or 'Please review all questions carefully. The assessment enforces strict timing and single-attempt integrity.' }}
+          </p>
+
+          <div class="row g-3 p-3 bg-dark rounded border border-secondary border-opacity-25 my-3">
+            <div class="col-sm-3 col-6">
+              <span class="text-dim small d-block">Duration</span>
+              <span class="fw-bold text-white fs-6"><i class="bi bi-clock text-primary me-1"></i>{{ assessment.duration_minutes }} Mins</span>
+            </div>
+            <div class="col-sm-3 col-6">
+              <span class="text-dim small d-block">Pass Threshold</span>
+              <span class="fw-bold text-white fs-6"><i class="bi bi-percent text-success me-1"></i>{{ assessment.pass_percentage }}%</span>
+            </div>
+            <div class="col-sm-3 col-6">
+              <span class="text-dim small d-block">MCQs Allocated</span>
+              <span class="fw-bold text-white fs-6"><i class="bi bi-check2-square text-info me-1"></i>{{ assessment.mcq_count }} Questions</span>
+            </div>
+            <div class="col-sm-3 col-6">
+              <span class="text-dim small d-block">Coding Problems</span>
+              <span class="fw-bold text-warning fs-6"><i class="bi bi-code-slash me-1"></i>{{ assessment.coding_count }} Problems</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Examination Status & Action Zone -->
+        <div class="p-4 rounded border {% if credential and credential.is_expired and not attempt %}border-danger bg-danger bg-opacity-10{% else %}border-secondary bg-dark{% endif %}">
+          {% set eff_status = credential.effective_status if credential else 'NO_CREDENTIAL' %}
+
+          <!-- CASE 1: Attempt already Completed -->
+          {% if attempt and attempt.status in ['COMPLETED', 'TIMED_OUT'] %}
+            <div class="text-center py-2">
+              <div class="text-success fs-1 mb-2"><i class="bi bi-check-circle-fill"></i></div>
+              <h5 class="fw-bold text-white">Assessment Attempt Completed</h5>
+              <p class="text-muted small mb-3">
+                Your examination was submitted on {{ attempt.submitted_at.strftime('%Y-%m-%d %H:%M UTC') if attempt.submitted_at else 'recently' }}.
+                Per Anti-Matrix examination policy, each credential permits exactly one attempt.
+              </p>
+              <a href="{{ url_for('candidate.exam_result') }}" class="btn btn-outline-primary">
+                <i class="bi bi-clipboard2-check me-1"></i>View Submission Summary
+              </a>
+            </div>
+
+          <!-- CASE 2: Attempt In-Progress -> Show RESUME ASSESSMENT -->
+          {% elif attempt and attempt.status == 'IN_PROGRESS' and attempt.can_resume %}
+            <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-3">
+              <div>
+                <span class="badge bg-warning text-dark fw-bold mb-1">
+                  <i class="bi bi-hourglass-split me-1"></i>TEST IN PROGRESS
+                </span>
+                <h5 class="fw-bold text-white mb-1">Interrupted Session Detected</h5>
+                <p class="text-muted small mb-0">
+                  Your assessment is currently running. You may resume your attempt with your saved answers.
+                </p>
+              </div>
+              <form method="POST" action="{{ url_for('candidate.exam_start') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-warning px-4 py-2 fw-bold text-dark">
+                  <i class="bi bi-play-circle-fill me-1"></i>Resume Assessment
+                </button>
+              </form>
+            </div>
+
+          <!-- CASE 3: Credential Expired Without Attempt Started -->
+          {% elif credential and credential.is_expired and not attempt %}
+            <div class="text-center py-3">
+              <div class="text-danger fs-1 mb-2"><i class="bi bi-exclamation-octagon-fill"></i></div>
+              <h5 class="fw-bold text-danger">Credential Validity Window Expired</h5>
+              <p class="text-dim small mb-0">
+                This assessment credential had a strict 48-hour validity period from creation and has now expired.
+                <br>No new examination attempt may be started with an expired credential.
+                <br>Please reach out to your Anti-Matrix recruiter or administrator to request an authorization review.
+              </p>
+            </div>
+
+          <!-- CASE 4: Credential Disabled -->
+          {% elif credential and credential.status == 'DISABLED' %}
+            <div class="text-center py-3">
+              <div class="text-warning fs-1 mb-2"><i class="bi bi-slash-circle"></i></div>
+              <h5 class="fw-bold text-warning">Credential Disabled</h5>
+              <p class="text-dim small mb-0">
+                Your credential has been disabled by the administrator. Please contact recruitment support.
+              </p>
+            </div>
+
+          <!-- CASE 5: Assessment Inactive -->
+          {% elif not assessment.is_active %}
+            <div class="text-center py-3">
+              <h5 class="fw-bold text-white">Assessment Currently Inactive</h5>
+              <p class="text-dim small mb-0">
+                This assessment has been temporarily deactivated by the administrator. Please check back shortly.
+              </p>
+            </div>
+
+          <!-- CASE 6: Valid & Available -> Show START ASSESSMENT -->
+          {% elif credential and credential.is_valid_for_new_attempt %}
+            <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-3">
+              <div>
+                <span class="badge bg-success-subtle text-success border border-success border-opacity-25 fw-bold mb-1">
+                  READY TO START
+                </span>
+                <h5 class="fw-bold text-white mb-1">Begin Your Examination</h5>
+                <p class="text-muted small mb-0">
+                  Ensure a stable internet connection and quiet environment. Once started, the timer runs continuously.
+                </p>
+              </div>
+              <form method="POST" action="{{ url_for('candidate.exam_start') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" id="startAssessmentBtn" class="btn btn-primary px-4 py-2 fw-bold" onclick="return confirm('Start Assessment now?\n\n- Duration: {{ assessment.duration_minutes }} minutes\n- Exactly 1 attempt is permitted\n- The timer begins immediately');">
+                  <i class="bi bi-play-fill me-1"></i>Start Assessment
+                </button>
+              </form>
+            </div>
+
+          {% else %}
+            <div class="text-center py-2 text-dim">
+              Credential status unavailable. Please contact administration.
+            </div>
+          {% endif %}
+        </div>
+
+      {% else %}
+        <div class="text-center py-5 text-dim">
+          <i class="bi bi-journal-x fs-1 d-block mb-2"></i>
+          No assessment currently assigned to your profile. Contact your recruiter.
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Right Column: 48-Hour Credential Validity Countdown & Rules -->
+  <div class="col-lg-4">
+    <!-- 48-Hour Live Expiry Countdown Card -->
+    {% if credential %}
+    <div class="card-dark mb-4">
+      <div class="d-flex align-items-center gap-2 mb-3">
+        <i class="bi bi-stopwatch text-warning fs-5"></i>
+        <h6 class="fw-bold text-white mb-0">Credential Expiry Countdown</h6>
+      </div>
+
+      <div class="countdown-box mb-3">
+        <small class="text-dim text-uppercase d-block fw-bold mb-1" style="font-size: 0.7rem;">Time Remaining to Start</small>
+        <div 
+          id="credentialCountdown" 
+          class="countdown-digits" 
+          data-remaining-seconds="{{ credential.seconds_remaining }}">
+          {{ credential.time_remaining_display }}
+        </div>
+      </div>
+
+      <div class="text-dim small mb-2">
+        <div class="d-flex justify-content-between mb-1">
+          <span>Issued At:</span>
+          <span class="text-white font-monospace">{{ credential.created_at.strftime('%Y-%m-%d %H:%M') }} UTC</span>
+        </div>
+        <div class="d-flex justify-content-between">
+          <span>Strict Expiry:</span>
+          <span class="text-danger font-monospace fw-bold">{{ credential.expires_at.strftime('%Y-%m-%d %H:%M') }} UTC</span>
+        </div>
+      </div>
+      <div class="text-dim" style="font-size: 0.75rem;">
+        <i class="bi bi-shield-exclamation text-warning me-1"></i>
+        Strict 48-hour access window. No examination can be initiated once expired.
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Candidate Rules Checklist -->
+    <div class="card-dark">
+      <h6 class="fw-bold text-white mb-3">
+        <i class="bi bi-info-circle-fill text-primary me-2"></i>Candidate Instructions
+      </h6>
+      <ul class="text-dim small ps-3 mb-0" style="line-height: 1.6;">
+        <li class="mb-2"><strong>One Attempt:</strong> Only one attempt is permitted per credential.</li>
+        <li class="mb-2"><strong>Server-Side Timer:</strong> The examination countdown is managed strictly on the server. Closing the browser does not pause the clock.</li>
+        <li class="mb-2"><strong>Automatic Answer Saving:</strong> Every response you select is autosaved instantly to the server.</li>
+        <li class="mb-2"><strong>Connection Loss:</strong> In case of an unexpected disconnection, log back in and click "Resume Assessment" to continue.</li>
+        <li><strong>Final Submission:</strong> Once you submit your assessment, your attempt is final and cannot be modified.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

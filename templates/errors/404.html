@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}404 Not Found — ANTI-MATRIX{% endblock %}
+
+{% block body %}
+<div class="auth-wrapper">
+  <div class="auth-card text-center py-5">
+    <div class="text-dim fs-1 mb-3"><i class="bi bi-question-circle" style="font-size: 3.5rem;"></i></div>
+    <h3 class="fw-bold text-white mb-2">404 Page Not Found</h3>
+    <p class="text-muted small mb-4">
+      The requested page or resource could not be located on the Anti-Matrix server.
+    </p>
+    <a href="{{ url_for('auth.index') }}" class="btn btn-primary">
+      <i class="bi bi-house me-1"></i>Return to Portal
+    </a>
+  </div>
+</div>
+{% endblock %}

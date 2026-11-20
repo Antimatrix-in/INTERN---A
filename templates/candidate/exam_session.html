@@ -1,0 +1,111 @@
+{% extends "candidate/base_candidate.html" %}
+
+{% block title %}Examination in Progress — ANTI-MATRIX{% endblock %}
+
+{% block candidate_content %}
+<div class="row g-4">
+  <!-- Left Side: Questions Container -->
+  <div class="col-lg-8">
+    <div class="card-dark mb-4">
+      <!-- Session Banner -->
+      <div class="d-flex justify-content-between align-items-center border-bottom border-secondary border-opacity-50 pb-3 mb-4">
+        <div>
+          <span class="badge bg-dark border border-secondary text-primary font-monospace">{{ assessment.code }}</span>
+          <h4 class="fw-bold text-white mb-0 mt-1">{{ assessment.title }}</h4>
+        </div>
+        <div id="autosaveStatus" class="small">
+          <span class="text-success"><i class="bi bi-check2-circle me-1"></i>Autosave Active</span>
+        </div>
+      </div>
+
+      <!-- Questions List (MCQs) -->
+      {% if questions %}
+        {% for q in questions %}
+        <div class="p-3 mb-4 rounded bg-dark border border-secondary border-opacity-35" id="question-card-{{ q.id }}">
+          <div class="d-flex justify-content-between align-items-start mb-3">
+            <span class="badge bg-primary text-white">Question {{ q.index }} of {{ questions|length }}</span>
+            <div class="d-flex gap-2 align-items-center">
+              <span class="badge bg-dark border border-secondary text-dim">{{ q.category }}</span>
+              <span class="badge bg-dark border border-secondary text-dim">{{ q.points }} pt{{ 's' if q.points > 1 else '' }}</span>
+            </div>
+          </div>
+
+          <div class="text-white fs-6 mb-3 fw-medium" style="line-height: 1.6;">
+            {{ q.text }}
+          </div>
+
+          <!-- Options -->
+          <div class="d-flex flex-column gap-2 mb-2">
+            {% for opt in q.options %}
+            <label class="p-2 px-3 rounded border border-secondary border-opacity-25 d-flex align-items-center gap-3 bg-black bg-opacity-25" style="cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='rgba(45,59,85,0.25)'">
+              <input 
+                type="radio" 
+                name="question_{{ q.id }}" 
+                value="{{ opt.id }}" 
+                class="form-check-input mt-0"
+                {% if q.selected_option == opt.id %}checked{% endif %}
+                onchange="autosaveAnswer({{ q.id }}, '{{ opt.id }}', '{{ csrf_token() }}')">
+              <span class="text-primary fw-bold font-monospace" style="width: 20px;">{{ opt.id }}</span>
+              <span class="text-white small">{{ opt.text }}</span>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+        {% endfor %}
+
+      {% else %}
+        <div class="text-center py-5 text-dim">
+          <i class="bi bi-journal-text fs-1 d-block mb-2"></i>
+          No questions are currently staged for this assessment.
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Right Side: Exam Timer & Question Palette & Finish Button -->
+  <div class="col-lg-4">
+    <!-- Server Timer Countdown -->
+    <div class="card-dark mb-4 sticky-top" style="top: 80px;">
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <span class="text-dim text-uppercase fw-bold small"><i class="bi bi-clock-history me-1 text-primary"></i>Server Timer</span>
+        <span class="badge bg-danger-subtle text-danger border border-danger border-opacity-25">Enforced</span>
+      </div>
+
+      <div class="countdown-box mb-3 py-2">
+        <div 
+          id="examSessionTimer" 
+          class="countdown-digits fs-1" 
+          data-seconds-remaining="{{ seconds_left }}">
+          --:--
+        </div>
+        <small class="text-dim">Time Remaining in Session</small>
+      </div>
+
+      <!-- Question Navigation Palette -->
+      <h6 class="text-white fw-bold small mb-2">Question Navigation</h6>
+      <div class="d-flex flex-wrap gap-2 mb-4">
+        {% for q in questions %}
+          <a 
+            href="#question-card-{{ q.id }}" 
+            id="palette-btn-{{ q.id }}"
+            class="btn btn-sm {% if q.is_answered %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+            style="width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; font-weight: bold;">
+            {{ q.index }}
+          </a>
+        {% endfor %}
+      </div>
+
+      <!-- Finish & Submit Form -->
+      <form method="POST" action="{{ url_for('candidate.exam_submit') }}" id="examSubmitForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button 
+          type="submit" 
+          class="btn btn-success w-100 py-2 fw-bold"
+          onclick="return confirm('Submit Assessment now?\n\n- You will not be able to change your answers after submission.\n- Ensure all answered questions are marked.');">
+          <i class="bi bi-send-check-fill me-1"></i>Submit Assessment
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

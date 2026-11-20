@@ -1,0 +1,141 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}{{ 'Edit Assessment' if assessment else 'Create Assessment' }} — ANTI-MATRIX Admin{% endblock %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h3 class="fw-bold text-white mb-1">{{ 'Edit Assessment: ' + assessment.title if assessment else 'Create Assessment' }}</h3>
+    <p class="text-muted small mb-0">Configure test duration, question distribution, pass threshold, and coding problems.</p>
+  </div>
+  <a href="{{ url_for('admin.assessments') }}" class="btn btn-secondary">
+    <i class="bi bi-arrow-left me-1"></i>Back to Assessments
+  </a>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <div class="card-dark">
+      <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="row g-3 mb-3">
+          <div class="col-md-8">
+            <label class="form-label-custom">Assessment Title <span class="text-danger">*</span></label>
+            <input 
+              type="text" 
+              name="title" 
+              class="form-control form-control-custom" 
+              placeholder="e.g. Software Engineering Intern Assessment 2026"
+              value="{{ form_data.title or (assessment.title if assessment else '') }}" 
+              required>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label-custom">Assessment Code <span class="text-danger">*</span></label>
+            <input 
+              type="text" 
+              name="code" 
+              class="form-control form-control-custom font-monospace text-uppercase" 
+              placeholder="e.g. AM-SWE-2026"
+              value="{{ form_data.code or (assessment.code if assessment else '') }}" 
+              required>
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label-custom">Description & Candidate Instructions</label>
+          <textarea 
+            name="description" 
+            rows="3" 
+            class="form-control form-control-custom" 
+            placeholder="Outline instructions, topics covered, and guidelines for candidates...">{{ form_data.description or (assessment.description if assessment else '') }}</textarea>
+        </div>
+
+        <div class="row g-3 mb-3">
+          <div class="col-md-6">
+            <label class="form-label-custom">Duration (Minutes) <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <span class="input-group-text bg-dark border-secondary text-dim"><i class="bi bi-clock"></i></span>
+              <input 
+                type="number" 
+                name="duration_minutes" 
+                class="form-control form-control-custom" 
+                min="5" 
+                max="360"
+                value="{{ form_data.duration_minutes or (assessment.duration_minutes if assessment else 60) }}" 
+                required>
+            </div>
+            <div class="form-text text-dim" style="font-size: 0.75rem;">Server-side enforced countdown limit once started.</div>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label-custom">Pass Percentage (%) <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <span class="input-group-text bg-dark border-secondary text-dim"><i class="bi bi-percent"></i></span>
+              <input 
+                type="number" 
+                name="pass_percentage" 
+                step="0.5" 
+                min="0" 
+                max="100" 
+                class="form-control form-control-custom" 
+                value="{{ form_data.pass_percentage or (assessment.pass_percentage if assessment else 60.0) }}" 
+                required>
+            </div>
+            <div class="form-text text-dim" style="font-size: 0.75rem;">Minimum percentage required to achieve a PASS verdict.</div>
+          </div>
+        </div>
+
+        <div class="row g-3 mb-4">
+          <div class="col-md-6">
+            <label class="form-label-custom">Number of Multiple Choice Questions (MCQs) <span class="text-danger">*</span></label>
+            <input 
+              type="number" 
+              name="mcq_count" 
+              min="0" 
+              max="200" 
+              class="form-control form-control-custom" 
+              value="{{ form_data.mcq_count or (assessment.mcq_count if assessment else 20) }}" 
+              required>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label-custom">Coding Problem Count (1 to 5) <span class="text-danger">*</span></label>
+            <select name="coding_count" class="form-select form-select-custom" required>
+              {% set current_coding = form_data.coding_count or (assessment.coding_count if assessment else 2) %}
+              {% for i in range(1, 6) %}
+                <option value="{{ i }}" {% if current_coding|int == i %}selected{% endif %}>
+                  {{ i }} Coding Problem{% if i > 1 %}s{% endif %}
+                </option>
+              {% endfor %}
+            </select>
+            <div class="form-text text-dim" style="font-size: 0.75rem;">Phase 1 architecture allocation (1 - 5 problems per requirement).</div>
+          </div>
+        </div>
+
+        <div class="mb-4 p-3 rounded bg-dark border border-secondary border-opacity-25">
+          <div class="form-check form-switch">
+            <input 
+              class="form-check-input" 
+              type="checkbox" 
+              name="is_active" 
+              id="isActiveSwitch"
+              {% if (form_data.is_active is defined and form_data.is_active) or (assessment and assessment.is_active) or (not assessment) %}checked{% endif %}>
+            <label class="form-check-label text-white fw-bold ms-2" for="isActiveSwitch">
+              Active Assessment Status
+            </label>
+          </div>
+          <small class="text-dim d-block mt-1">Inactive assessments cannot be assigned to new candidate credentials or started.</small>
+        </div>
+
+        <div class="d-flex justify-content-end gap-2">
+          <a href="{{ url_for('admin.assessments') }}" class="btn btn-secondary">Cancel</a>
+          <button type="submit" class="btn btn-primary px-4">
+            <i class="bi bi-check-lg me-1"></i>{{ 'Update Assessment' if assessment else 'Save Assessment' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

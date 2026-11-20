@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 50" width="200" height="50">
+  <defs>
+    <linearGradient id="orangeGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f97316"/>
+      <stop offset="100%" stop-color="#ea580c"/>
+    </linearGradient>
+  </defs>
+  <!-- Shield Icon -->
+  <rect x="5" y="5" width="40" height="40" rx="8" fill="url(#orangeGlow)"/>
+  <path d="M25 14 L34 18 V26 C34 31 25 35 25 35 C25 35 16 31 16 26 V18 Z" fill="#070b14"/>
+  <path d="M25 18 L31 21 V25 C31 28.5 25 31.5 25 31.5 C25 31.5 19 28.5 19 25 V21 Z" fill="#f97316"/>
+  <!-- Typography -->
+  <text x="56" y="32" font-family="'Inter', sans-serif" font-weight="900" font-size="20" fill="#ffffff" letter-spacing="-0.5">ANTI-<tspan fill="#f97316">MATRIX</tspan></text>
+</svg>
