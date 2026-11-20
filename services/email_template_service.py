@@ -20,19 +20,28 @@ Talent Acquisition Team
     },
     {
         "name": "Assessment Invitation",
-        "subject": "Online Assessment Invitation — {{company_name}}",
+        "subject": "Assessment Credentials — {{assessment_name}} — Anti-Matrix",
         "category": "ASSESSMENT",
         "body": """Dear {{candidate_name}},
 
-We are pleased to invite you to complete the online assessment for the {{job_title}} role at {{company_name}}.
+You have been provisioned access for the {{assessment_name}} on the Anti-Matrix Online Assessment Platform.
 
-Application ID: {{application_id}}
-Please log in to your candidate assessment portal to access your assigned technical examination.
-Ensure you complete your assessment before the strict credential validity period expires.
+Your Assessment Login Details:
+Candidate ID: {{candidate_id}}
+Username: {{username}}
+Password: {{password}}
+Portal Login URL: {{login_url}}
+
+Validity Period:
+Your credentials expire on {{expiry_time}} (Strictly 48 Hours from issuance).
+
+Important Instructions:
+- Exactly 1 attempt is permitted per credential.
+- Once the assessment begins, the timer cannot be paused.
+- In case of network interruption, log back in with these credentials to resume your attempt.
 
 Best regards,
-Recruitment & Assessment Team
-{{company_name}}"""
+Anti-Matrix Assessment Team"""
     },
     {
         "name": "Shortlisted Notification",
@@ -168,6 +177,9 @@ def seed_default_templates_and_mappings():
             db.session.flush()
             template_map[t_data['name']] = new_t.id
         else:
+            if t_data['name'] == 'Assessment Invitation' and '{{password}}' not in existing.body:
+                existing.subject = t_data['subject']
+                existing.body = t_data['body']
             template_map[t_data['name']] = existing.id
 
     # 2. Seed Event Mappings with stable template IDs

@@ -5,7 +5,9 @@ from .credential_service import (
     toggle_credential_status,
     get_all_credentials,
     generate_candidate_user_id,
-    generate_secure_password
+    generate_secure_password,
+    find_candidate_by_id,
+    send_credential_email
 )
 from .assessment_service import (
     create_assessment,

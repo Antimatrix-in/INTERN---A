@@ -110,7 +110,27 @@ def create_app(config_name=None):
             seed_default_templates_and_mappings()
             click.secho("Default email templates verified / seeded.", fg="cyan")
 
+    ensure_schema_columns(app)
     return app
+
+def ensure_schema_columns(app):
+    """Safely adds missing columns to SQLite / PostgreSQL tables without data loss."""
+    with app.app_context():
+        try:
+            with db.engine.connect() as conn:
+                if db.engine.name == 'sqlite':
+                    res = conn.execute(db.text("PRAGMA table_info(credentials)"))
+                    existing = [r[1] for r in res.fetchall()]
+                    if existing:
+                        if 'email_status' not in existing:
+                            conn.execute(db.text("ALTER TABLE credentials ADD COLUMN email_status VARCHAR(20) DEFAULT 'PENDING'"))
+                        if 'email_sent_at' not in existing:
+                            conn.execute(db.text("ALTER TABLE credentials ADD COLUMN email_sent_at DATETIME"))
+                        if 'email_error' not in existing:
+                            conn.execute(db.text("ALTER TABLE credentials ADD COLUMN email_error TEXT"))
+                        conn.commit()
+        except Exception:
+            pass
 
 app = create_app()
 

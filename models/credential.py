@@ -13,6 +13,11 @@ class Credential(db.Model):
     expires_at = db.Column(db.DateTime(timezone=True), nullable=False, index=True)
     used_at = db.Column(db.DateTime(timezone=True), nullable=True)
 
+    # Email Delivery Tracking
+    email_status = db.Column(db.String(20), nullable=False, default='PENDING', index=True) # PENDING, SENT, FAILED
+    email_sent_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    email_error = db.Column(db.Text, nullable=True)
+
     # Relationships
     candidate = db.relationship('User', back_populates='credential')
     assessment = db.relationship('Assessment', back_populates='credentials')

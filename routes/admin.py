@@ -12,6 +12,8 @@ from services import (
     regenerate_candidate_credential,
     toggle_credential_status,
     get_all_credentials,
+    find_candidate_by_id,
+    send_credential_email,
     get_sample_json_template,
     parse_and_validate_question_json,
     save_imported_questions,
@@ -599,22 +601,83 @@ def credentials():
         search_query=search
     )
 
+@admin_bp.route('/candidates/lookup')
+def candidate_lookup():
+    """
+    Search and fetch candidate details by generic Candidate ID.
+    Accepts candidate ID (user_id), username, or email from existing database.
+    """
+    candidate_id = request.args.get('candidate_id', '').strip()
+    if not candidate_id:
+        return jsonify({"success": False, "message": "Candidate ID is required."}), 400
+
+    cand = find_candidate_by_id(candidate_id)
+    if not cand:
+        return jsonify({"success": False, "message": "Candidate not found. Please check the Candidate ID."}), 404
+
+    active_cred = cand.credential if (cand.credential and cand.credential.effective_status == 'ACTIVE') else None
+
+    return jsonify({
+        "success": True,
+        "candidate": {
+            "id": cand.id,
+            "user_id": cand.user_id,
+            "full_name": cand.full_name,
+            "email": cand.email
+        },
+        "has_active_credential": bool(active_cred),
+        "active_assessment_id": active_cred.assessment_id if active_cred else None,
+        "active_assessment_title": active_cred.assessment.title if active_cred else None
+    })
+
 @admin_bp.route('/credentials/create', methods=['GET', 'POST'])
 def credential_create():
     all_assessments = Assessment.query.filter_by(is_active=True).order_by(Assessment.title.asc()).all()
 
+    # Handle POST (Generate Credentials)
     if request.method == 'POST':
-        full_name = request.form.get('full_name')
-        email = request.form.get('email')
-        assessment_id = request.form.get('assessment_id', type=int)
-        custom_password = request.form.get('custom_password')
-        custom_password = custom_password.strip() if custom_password else None
+        if request.is_json:
+            data = request.get_json() or {}
+            candidate_id = data.get('candidate_id', '').strip()
+            assessment_id = data.get('assessment_id')
+            custom_password = data.get('custom_password')
+            full_name = data.get('full_name')
+            email = data.get('email')
+        else:
+            candidate_id = request.form.get('candidate_id', '').strip()
+            assessment_id = request.form.get('assessment_id', type=int)
+            custom_password = request.form.get('custom_password')
+            full_name = request.form.get('full_name')
+            email = request.form.get('email')
 
-        if not full_name or not email or not assessment_id:
-            flash("Candidate Full Name, Email, and Assigned Assessment are required.", "danger")
-            return render_template('admin/credential_create.html', assessments=all_assessments, form_data=request.form)
+        if not candidate_id and (not full_name or not email):
+            msg = "Candidate ID is required."
+            if request.is_json:
+                return jsonify({"success": False, "message": msg}), 400
+            flash(msg, "danger")
+            return redirect(url_for('admin.credential_create'))
+
+        if not assessment_id:
+            msg = "Please select an assigned assessment."
+            if request.is_json:
+                return jsonify({"success": False, "message": msg}), 400
+            flash(msg, "danger")
+            return redirect(url_for('admin.credential_create', candidate_id=candidate_id))
+
+        # Check candidate existence
+        if candidate_id:
+            cand = find_candidate_by_id(candidate_id)
+            if not cand:
+                msg = "Candidate not found. Please check the Candidate ID."
+                if request.is_json:
+                    return jsonify({"success": False, "message": msg}), 404
+                flash(msg, "danger")
+                return redirect(url_for('admin.credential_create', candidate_id=candidate_id))
+        else:
+            cand = None
 
         credential, candidate, raw_password, error = create_candidate_credential(
+            candidate_id=cand.user_id if cand else None,
             full_name=full_name,
             email=email,
             assessment_id=assessment_id,
@@ -622,10 +685,19 @@ def credential_create():
         )
 
         if error:
+            if request.is_json:
+                return jsonify({"success": False, "message": error}), 400
             flash(error, "danger")
-            return render_template('admin/credential_create.html', assessments=all_assessments, form_data=request.form)
+            return redirect(url_for('admin.credential_create', candidate_id=candidate_id or (candidate.user_id if candidate else '')))
 
-        # Store in session for the confirmation screen
+        # Store in session temporary delivery mechanism
+        session['temp_credential_delivery'] = {
+            'credential_id': credential.id,
+            'password': raw_password,
+            'candidate_id': candidate.id,
+            'candidate_user_id': candidate.user_id,
+            'assessment_id': credential.assessment_id
+        }
         session['latest_created_credential'] = {
             'credential_id': credential.id,
             'credential_key': credential.credential_key,
@@ -640,9 +712,101 @@ def credential_create():
             'duration_minutes': credential.assessment.duration_minutes
         }
 
-        return redirect(url_for('admin.credential_confirm', credential_id=credential.id))
+        if request.is_json:
+            return jsonify({
+                "success": True,
+                "message": "Credentials successfully generated.",
+                "credential": {
+                    "id": credential.id,
+                    "candidate_name": candidate.full_name,
+                    "candidate_id": candidate.user_id,
+                    "candidate_email": candidate.email,
+                    "assessment_title": credential.assessment.title,
+                    "login_user_id": candidate.user_id,
+                    "password": raw_password,
+                    "validity": "48 Hours",
+                    "created_at": credential.created_at.strftime('%Y-%m-%d %H:%M:%S UTC'),
+                    "expires_at": credential.expires_at.strftime('%Y-%m-%d %H:%M:%S UTC'),
+                    "email_status": credential.email_status,
+                    "email_sent_at": None
+                }
+            })
 
-    return render_template('admin/credential_create.html', assessments=all_assessments, form_data={})
+        flash("Credentials generated successfully.", "success")
+        return redirect(url_for('admin.credential_create', credential_id=credential.id))
+
+    # GET request handling
+    credential_id = request.args.get('credential_id', type=int)
+    candidate_id_param = request.args.get('candidate_id', '').strip()
+
+    loaded_credential = None
+    candidate = None
+    raw_password = None
+
+    if credential_id:
+        loaded_credential = db.session.get(Credential, credential_id)
+        if loaded_credential:
+            candidate = loaded_credential.candidate
+            temp_store = session.get('temp_credential_delivery', {})
+            if temp_store.get('credential_id') == credential_id:
+                raw_password = temp_store.get('password')
+
+    elif candidate_id_param:
+        candidate = find_candidate_by_id(candidate_id_param)
+        if not candidate:
+            flash("Candidate not found. Please check the Candidate ID.", "warning")
+
+    return render_template(
+        'admin/credential_create.html',
+        assessments=all_assessments,
+        candidate=candidate,
+        credential=loaded_credential,
+        raw_password=raw_password,
+        candidate_id_query=candidate_id_param
+    )
+
+@admin_bp.route('/credentials/<int:credential_id>/send-email', methods=['POST'])
+def credential_send_email(credential_id):
+    """
+    Sends the assessment credential email to the candidate's registered email.
+    Records delivery status (Pending, Sent, Failed) and timestamp.
+    Prevents duplicate sending unless explicitly requested via resend.
+    """
+    resend = (
+        request.args.get('resend', '').lower() in ['true', '1'] or
+        request.form.get('resend', '').lower() in ['true', '1'] or
+        (request.is_json and (request.get_json() or {}).get('resend') is True)
+    )
+
+    temp_store = session.get('temp_credential_delivery', {})
+    raw_password = temp_store.get('password') if temp_store.get('credential_id') == credential_id else None
+
+    login_url = url_for('auth.login', _external=True)
+    success, message = send_credential_email(
+        credential_id=credential_id,
+        raw_password=raw_password,
+        resend=resend,
+        login_url=login_url
+    )
+
+    cred = db.session.get(Credential, credential_id)
+    sent_at_str = cred.email_sent_at.strftime('%Y-%m-%d %H:%M:%S UTC') if (cred and cred.email_sent_at) else None
+
+    if request.is_json:
+        status_code = 200 if success else (400 if "already been sent" in message else 500)
+        return jsonify({
+            "success": success,
+            "message": message,
+            "email_status": cred.email_status if cred else "FAILED",
+            "email_sent_at": sent_at_str
+        }), status_code
+
+    if success:
+        flash(message, "success")
+    else:
+        flash(message, "danger")
+
+    return redirect(url_for('admin.credential_create', credential_id=credential_id))
 
 @admin_bp.route('/credentials/<int:credential_id>/confirm')
 def credential_confirm(credential_id):
