@@ -7,6 +7,7 @@ from .credential import Credential
 from .attempt import Attempt, AttemptAnswer
 from .result import Result
 from .proctoring import ProctoringEvent
+from .email_template import EmailTemplate, EmailEventMapping, ScheduledEmailJob
 
 __all__ = [
     'db',
@@ -18,5 +19,8 @@ __all__ = [
     'Attempt',
     'AttemptAnswer',
     'Result',
-    'ProctoringEvent'
+    'ProctoringEvent',
+    'EmailTemplate',
+    'EmailEventMapping',
+    'ScheduledEmailJob'
 ]

@@ -1,0 +1,440 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}Email Templates — ANTI-MATRIX Admin{% endblock %}
+
+{% block admin_content %}
+<!-- Header -->
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+  <div>
+    <h3 class="fw-bold text-white mb-1">
+      <i class="bi bi-envelope-paper-fill text-primary me-2"></i>Email Template Management
+    </h3>
+    <p class="text-muted small mb-0">
+      Centralized notification templates, placeholder substitutions, and recruitment lifecycle event mappings.
+    </p>
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    <a href="{{ url_for('admin.template_new') }}" class="btn btn-primary">
+      <i class="bi bi-plus-circle me-1"></i>Add New Template
+    </a>
+  </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="row g-3 mb-4">
+  <div class="col-md-3">
+    <div class="card-dark p-3 h-100">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="text-dim small text-uppercase fw-bold">Total Templates</span>
+        <div class="rounded p-2 text-primary" style="background: rgba(249, 115, 22, 0.15);">
+          <i class="bi bi-file-earmark-text fs-5"></i>
+        </div>
+      </div>
+      <div class="fs-3 fw-bold text-white">{{ stats.total_templates }}</div>
+      <small class="text-muted">{{ stats.active_templates }} active templates</small>
+    </div>
+  </div>
+
+  <div class="col-md-3">
+    <div class="card-dark p-3 h-100">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="text-dim small text-uppercase fw-bold">Active Templates</span>
+        <div class="rounded p-2 text-success" style="background: rgba(16, 185, 129, 0.15);">
+          <i class="bi bi-check-circle-fill fs-5"></i>
+        </div>
+      </div>
+      <div class="fs-3 fw-bold text-white">{{ stats.active_templates }}</div>
+      <small class="text-success">Available for mapping</small>
+    </div>
+  </div>
+
+  <div class="col-md-3">
+    <div class="card-dark p-3 h-100">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="text-dim small text-uppercase fw-bold">Event Mappings</span>
+        <div class="rounded p-2 text-info" style="background: rgba(59, 130, 246, 0.15);">
+          <i class="bi bi-diagram-3-fill fs-5"></i>
+        </div>
+      </div>
+      <div class="fs-3 fw-bold text-white">{{ stats.total_mappings }}</div>
+      <small class="text-info">{{ stats.automated_mappings }} automated workflows</small>
+    </div>
+  </div>
+
+  <div class="col-md-3">
+    <div class="card-dark p-3 h-100">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="text-dim small text-uppercase fw-bold">Email Queue</span>
+        <div class="rounded p-2 text-warning" style="background: rgba(245, 158, 11, 0.15);">
+          <i class="bi bi-send-check-fill fs-5"></i>
+        </div>
+      </div>
+      <div class="fs-3 fw-bold text-white">{{ stats.pending_jobs }}</div>
+      <small class="text-muted">{{ stats.sent_jobs }} sent in history</small>
+    </div>
+  </div>
+</div>
+
+<!-- Placeholder Help Reference Banner -->
+<div class="card-dark mb-4 p-3 border-secondary border-opacity-25 bg-black bg-opacity-25">
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+    <div>
+      <span class="badge bg-secondary-subtle text-primary border border-secondary mb-1">
+        <i class="bi bi-braces me-1"></i>Supported Variable Placeholders
+      </span>
+      <div class="text-dim small">
+        These tags are dynamically populated when an email is generated:
+      </div>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      <span class="badge bg-dark border border-secondary text-white font-monospace" title="Full name of candidate">
+        &#123;&#123;candidate_name&#125;&#125;
+      </span>
+      <span class="badge bg-dark border border-secondary text-white font-monospace" title="Unique recruitment application ID">
+        &#123;&#123;application_id&#125;&#125;
+      </span>
+      <span class="badge bg-dark border border-secondary text-white font-monospace" title="Title of the job position">
+        &#123;&#123;job_title&#125;&#125;
+      </span>
+      <span class="badge bg-dark border border-secondary text-white font-monospace" title="Company branding name">
+        &#123;&#123;company_name&#125;&#125;
+      </span>
+    </div>
+  </div>
+</div>
+
+<!-- Navigation Tabs -->
+<div class="mb-4">
+  <ul class="nav nav-pills custom-category-pills p-1 rounded bg-dark border border-secondary border-opacity-25">
+    <li class="nav-item flex-fill">
+      <a class="nav-link text-center py-2 {% if active_tab == 'templates' %}active fw-bold{% endif %}" href="{{ url_for('admin.templates', tab='templates') }}">
+        <i class="bi bi-envelope-paper me-2"></i>1. Templates Repository
+        <span class="badge ms-2 {% if active_tab == 'templates' %}bg-white text-dark{% else %}bg-secondary text-white{% endif %}">{{ stats.total_templates }}</span>
+      </a>
+    </li>
+    <li class="nav-item flex-fill">
+      <a class="nav-link text-center py-2 {% if active_tab == 'mappings' %}active fw-bold{% endif %}" href="{{ url_for('admin.templates', tab='mappings') }}">
+        <i class="bi bi-diagram-3 me-2"></i>2. Recruitment Event Mappings
+        <span class="badge ms-2 {% if active_tab == 'mappings' %}bg-white text-dark{% else %}bg-secondary text-white{% endif %}">{{ stats.total_mappings }}</span>
+      </a>
+    </li>
+    <li class="nav-item flex-fill">
+      <a class="nav-link text-center py-2 {% if active_tab == 'queue' %}active fw-bold{% endif %}" href="{{ url_for('admin.templates', tab='queue') }}">
+        <i class="bi bi-clock-history me-2"></i>3. Scheduled Queue
+        <span class="badge ms-2 {% if active_tab == 'queue' %}bg-white text-dark{% else %}bg-secondary text-white{% endif %}">{{ stats.pending_jobs }}</span>
+      </a>
+    </li>
+  </ul>
+</div>
+
+{% if active_tab == 'templates' %}
+  <!-- TAB 1: TEMPLATES REPOSITORY -->
+  <!-- Search & Filters -->
+  <div class="card-dark mb-4 p-3">
+    <form method="GET" action="{{ url_for('admin.templates') }}" class="row g-2 align-items-center">
+      <input type="hidden" name="tab" value="templates">
+      <div class="col-md-4">
+        <input 
+          type="text" 
+          name="search" 
+          class="form-control form-control-custom form-control-sm" 
+          placeholder="Search template name or subject..."
+          value="{{ search_query or '' }}">
+      </div>
+      <div class="col-md-3">
+        <select name="category" class="form-select form-select-custom form-select-sm">
+          <option value="">All Categories</option>
+          <option value="RECRUITMENT" {% if selected_category == 'RECRUITMENT' %}selected{% endif %}>Recruitment</option>
+          <option value="ASSESSMENT" {% if selected_category == 'ASSESSMENT' %}selected{% endif %}>Assessment</option>
+          <option value="NOTIFICATION" {% if selected_category == 'NOTIFICATION' %}selected{% endif %}>Notification</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <select name="status" class="form-select form-select-custom form-select-sm">
+          <option value="">All Statuses</option>
+          <option value="active" {% if selected_status == 'active' %}selected{% endif %}>Active Only</option>
+          <option value="false" {% if selected_status == 'false' %}selected{% endif %}>Inactive Only</option>
+        </select>
+      </div>
+      <div class="col-md-2 d-flex gap-1">
+        <button type="submit" class="btn btn-primary btn-sm flex-grow-1">
+          <i class="bi bi-funnel-fill me-1"></i>Filter
+        </button>
+        <a href="{{ url_for('admin.templates', tab='templates') }}" class="btn btn-outline-secondary btn-sm" title="Clear Filters">
+          <i class="bi bi-x-lg"></i>
+        </a>
+      </div>
+    </form>
+  </div>
+
+  <!-- Templates Table -->
+  <div class="card-dark">
+    <div class="table-responsive">
+      <table class="table-custom">
+        <thead>
+          <tr>
+            <th style="width: 45px;">#</th>
+            <th>Template Name</th>
+            <th>Subject Line</th>
+            <th>Category</th>
+            <th>Mapped Events</th>
+            <th>Status</th>
+            <th>Last Updated</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for t in templates %}
+          <tr>
+            <td class="text-dim">{{ loop.index }}</td>
+            <td>
+              <div class="fw-bold text-white mb-0">{{ t.name }}</div>
+              <small class="text-dim">ID: #{{ t.id }}</small>
+            </td>
+            <td style="max-width: 280px;">
+              <div class="text-truncate text-white small" title="{{ t.subject }}">{{ t.subject }}</div>
+            </td>
+            <td>
+              <span class="badge bg-dark border border-secondary text-primary">{{ t.category }}</span>
+            </td>
+            <td>
+              {% if t.event_mappings %}
+                {% for m in t.event_mappings %}
+                  <span class="badge bg-info-subtle text-info border border-info border-opacity-25 d-inline-block mb-1" style="font-size: 0.72rem;">
+                    {{ m.event_name }}
+                  </span>
+                {% endfor %}
+              {% else %}
+                <span class="text-muted small">Not mapped</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if t.is_active %}
+                <span class="badge bg-success-subtle text-success border border-success border-opacity-25">ACTIVE</span>
+              {% else %}
+                <span class="badge bg-secondary-subtle text-dim border border-secondary border-opacity-25">INACTIVE</span>
+              {% endif %}
+            </td>
+            <td>
+              <span class="text-dim small">
+                {{ t.updated_at.strftime('%Y-%m-%d %H:%M') if t.updated_at else '-' }}
+              </span>
+            </td>
+            <td class="text-end">
+              <div class="btn-group btn-group-sm">
+                <!-- Preview -->
+                <a href="{{ url_for('admin.template_preview', template_id=t.id) }}" class="btn btn-outline-secondary" title="Preview with sample candidate data">
+                  <i class="bi bi-eye"></i>
+                </a>
+                <!-- Edit -->
+                <a href="{{ url_for('admin.template_edit', template_id=t.id) }}" class="btn btn-outline-secondary" title="Edit Template">
+                  <i class="bi bi-pencil"></i>
+                </a>
+                <!-- Duplicate -->
+                <form method="POST" action="{{ url_for('admin.template_duplicate', template_id=t.id) }}" class="d-inline">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit" class="btn btn-outline-secondary" title="Duplicate Template">
+                    <i class="bi bi-copy"></i>
+                  </button>
+                </form>
+                <!-- Toggle Status -->
+                <form method="POST" action="{{ url_for('admin.template_toggle', template_id=t.id) }}" class="d-inline">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit" class="btn btn-outline-secondary" title="{% if t.is_active %}Deactivate{% else %}Activate{% endif %}">
+                    <i class="bi {% if t.is_active %}bi-pause-fill text-warning{% else %}bi-play-fill text-success{% endif %}"></i>
+                  </button>
+                </form>
+                <!-- Delete -->
+                <form method="POST" action="{{ url_for('admin.template_delete', template_id=t.id) }}" class="d-inline" onsubmit="return confirm('Delete template \'{{ t.name }}\'? Event mappings referencing it will be unassigned.');">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit" class="btn btn-outline-danger" title="Delete Template">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="8" class="text-center text-dim py-5">
+              <i class="bi bi-envelope-open fs-1 d-block mb-2 text-primary opacity-50"></i>
+              No templates found matching criteria. Click "Add New Template" to create one.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+{% elif active_tab == 'mappings' %}
+  <!-- TAB 2: RECRUITMENT EVENT MAPPINGS -->
+  <div class="row g-4">
+    {% for m in mappings %}
+    <div class="col-lg-6">
+      <div class="card-dark p-4 h-100 border-secondary border-opacity-25">
+        <form method="POST" action="{{ url_for('admin.event_mapping_update') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="event_key" value="{{ m.event_key }}">
+
+          <div class="d-flex justify-content-between align-items-start mb-3">
+            <div>
+              <h5 class="fw-bold text-white mb-1">{{ m.event_name }}</h5>
+              <span class="badge bg-dark border border-secondary text-primary font-monospace">{{ m.event_key }}</span>
+            </div>
+            {% if m.is_automated %}
+              <span class="badge bg-success-subtle text-success border border-success border-opacity-25 px-2 py-1">
+                <i class="bi bi-lightning-charge-fill me-1"></i>AUTOMATED
+              </span>
+            {% else %}
+              <span class="badge bg-warning-subtle text-warning border border-warning border-opacity-25 px-2 py-1">
+                <i class="bi bi-pause-circle-fill me-1"></i>PAUSED
+              </span>
+            {% endif %}
+          </div>
+
+          <p class="text-muted small mb-3">{{ m.description or 'Triggered during candidate recruitment lifecycle.' }}</p>
+
+          {% if m.event_key == 'APPLICATION_SUBMITTED' %}
+            <div class="alert alert-info border-0 p-2 mb-3 small d-flex align-items-center">
+              <i class="bi bi-info-circle-fill fs-6 me-2 text-info"></i>
+              <span>Enforces a <strong>5-minute delay</strong> and duplicate-email protection per candidate application.</span>
+            </div>
+          {% elif m.event_key == 'ASSESSMENT_INVITATION' %}
+            <div class="alert alert-warning border-0 p-2 mb-3 small d-flex align-items-center">
+              <i class="bi bi-shield-lock-fill fs-6 me-2 text-warning"></i>
+              <span>Assessment email automation is paused by system design until explicitly activated.</span>
+            </div>
+          {% endif %}
+
+          <div class="mb-3">
+            <label class="form-label-custom">Mapped Email Template <span class="text-danger">*</span></label>
+            <select name="template_id" class="form-select form-select-custom">
+              <option value="">-- No Template Assigned (Disabled) --</option>
+              {% for t in active_templates %}
+                <option value="{{ t.id }}" {% if m.template_id == t.id %}selected{% endif %}>
+                  {{ t.name }} [ID: #{{ t.id }}]
+                </option>
+              {% endfor %}
+            </select>
+            <div class="form-text text-dim">Uses stable template ID #{{ m.template_id or 'None' }}. Editing the template name will not break this link.</div>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label-custom">Dispatch Delay (Minutes)</label>
+              <div class="input-group">
+                <input type="number" min="0" max="1440" name="delay_minutes" class="form-control form-control-custom" value="{{ m.delay_minutes }}">
+                <span class="input-group-text bg-dark border-secondary text-dim small">Min</span>
+              </div>
+              <div class="form-text text-dim">0 = Immediate dispatch upon event.</div>
+            </div>
+            <div class="col-md-6 d-flex align-items-center pt-3">
+              <div class="form-check form-switch mt-2">
+                <input class="form-check-input" type="checkbox" name="is_automated" id="auto_{{ m.event_key }}" {% if m.is_automated %}checked{% endif %}>
+                <label class="form-check-label text-white small" for="auto_{{ m.event_key }}">
+                  Enable Automation
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-between align-items-center pt-3 border-top border-secondary border-opacity-25">
+            {% if m.template_id %}
+              <a href="{{ url_for('admin.template_preview', template_id=m.template_id) }}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-eye me-1"></i>Preview Mapped Template
+              </a>
+            {% else %}
+              <span></span>
+            {% endif %}
+            <button type="submit" class="btn btn-primary btn-sm px-3">
+              <i class="bi bi-check2 me-1"></i>Save Mapping
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+{% elif active_tab == 'queue' %}
+  <!-- TAB 3: SCHEDULED EMAIL QUEUE -->
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h5 class="fw-bold text-white mb-0">Scheduled & Dispatched Email Queue</h5>
+      <small class="text-dim">Queue records persist in database and safely survive application restarts.</small>
+    </div>
+    <form method="POST" action="{{ url_for('admin.process_email_queue') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-arrow-repeat me-1"></i>Process Due Emails Now
+      </button>
+    </form>
+  </div>
+
+  <div class="card-dark">
+    <div class="table-responsive">
+      <table class="table-custom">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Recipient</th>
+            <th>Event Trigger</th>
+            <th>Subject</th>
+            <th>Scheduled For (UTC)</th>
+            <th>Status</th>
+            <th>Idempotency Protection</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for job in queue_jobs %}
+          <tr>
+            <td class="text-dim">{{ loop.index }}</td>
+            <td>
+              <div class="fw-bold text-white mb-0">{{ job.recipient_name or 'Candidate' }}</div>
+              <small class="text-dim">{{ job.recipient_email }}</small>
+            </td>
+            <td>
+              <span class="badge bg-dark border border-secondary text-primary font-monospace">{{ job.event_key }}</span>
+            </td>
+            <td style="max-width: 260px;">
+              <div class="text-truncate text-white small" title="{{ job.subject }}">{{ job.subject }}</div>
+            </td>
+            <td>
+              <span class="text-dim small">{{ job.scheduled_at.strftime('%Y-%m-%d %H:%M:%S') if job.scheduled_at else '-' }}</span>
+            </td>
+            <td>
+              {% if job.status == 'SENT' %}
+                <span class="badge bg-success-subtle text-success">SENT</span>
+              {% elif job.status == 'PENDING' %}
+                <span class="badge bg-warning-subtle text-warning">PENDING</span>
+              {% elif job.status == 'FAILED' %}
+                <span class="badge bg-danger-subtle text-danger">FAILED</span>
+              {% else %}
+                <span class="badge bg-secondary-subtle text-dim">{{ job.status }}</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if job.idempotency_key %}
+                <span class="badge bg-dark border border-secondary text-dim font-monospace" style="font-size: 0.72rem;" title="{{ job.idempotency_key }}">
+                  <i class="bi bi-shield-check text-success me-1"></i>{{ job.idempotency_key[:18] }}...
+                </span>
+              {% else %}
+                <span class="text-muted small">None</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="7" class="text-center text-dim py-5">
+              <i class="bi bi-inbox fs-1 d-block mb-2 text-warning opacity-50"></i>
+              No email jobs currently queued. Jobs triggered by application events appear here.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endif %}
+{% endblock %}

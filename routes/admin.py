@@ -1,7 +1,7 @@
 import json
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, session, Response
 from flask_login import login_required, current_user
-from models import db, User, Assessment, Question, CodingQuestion, Credential, Attempt, Result, ProctoringEvent
+from models import db, User, Assessment, Question, CodingQuestion, Credential, Attempt, Result, ProctoringEvent, EmailTemplate, EmailEventMapping, ScheduledEmailJob
 from services import (
     admin_required,
     get_admin_dashboard_stats,
@@ -18,7 +18,21 @@ from services import (
     get_question_bank_stats,
     get_coding_questions_query,
     get_mcq_questions_query,
-    CATEGORY_CONFIG
+    CATEGORY_CONFIG,
+    get_all_templates,
+    get_template_by_id,
+    create_email_template,
+    update_email_template,
+    duplicate_email_template,
+    toggle_email_template_status,
+    delete_email_template,
+    get_all_event_mappings,
+    update_event_mapping,
+    render_template_placeholders,
+    schedule_email_event,
+    get_email_queue_jobs,
+    process_pending_email_jobs,
+    get_email_dashboard_stats
 )
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
@@ -716,3 +730,187 @@ def proctoring():
 @admin_bp.route('/settings')
 def settings():
     return render_template('admin/settings.html', admin_user=current_user)
+
+# -------------------------------------------------------------
+# 9. Email Template Management & Recruitment Lifecycle Mappings
+# -------------------------------------------------------------
+@admin_bp.route('/templates')
+def templates():
+    """
+    Centralized Email Template Management page.
+    Resolves previous 404 issue and provides templates repository, event mappings, and queue.
+    """
+    tab = request.args.get('tab', 'templates').lower()
+    search = request.args.get('search')
+    category = request.args.get('category')
+    status = request.args.get('status')
+
+    all_templates = get_all_templates(search=search, category=category, status=status)
+    mappings = get_all_event_mappings()
+    queue_jobs = get_email_queue_jobs(limit=50)
+    stats = get_email_dashboard_stats()
+
+    # Active templates for mapping dropdowns
+    active_templates = [t for t in all_templates if t.is_active]
+    if not active_templates:
+        active_templates = EmailTemplate.query.filter_by(is_active=True).order_by(EmailTemplate.name.asc()).all()
+
+    return render_template(
+        'admin/templates.html',
+        active_tab=tab,
+        templates=all_templates,
+        active_templates=active_templates,
+        mappings=mappings,
+        queue_jobs=queue_jobs,
+        stats=stats,
+        search_query=search,
+        selected_category=category,
+        selected_status=status
+    )
+
+@admin_bp.route('/templates/new', methods=['GET', 'POST'])
+def template_new():
+    """Create a new email template with unique name validation."""
+    if request.method == 'POST':
+        name = request.form.get('name')
+        subject = request.form.get('subject')
+        body = request.form.get('body')
+        category = request.form.get('category', 'RECRUITMENT')
+        is_active = bool(request.form.get('is_active'))
+
+        template, error = create_email_template(
+            name=name,
+            subject=subject,
+            body=body,
+            category=category,
+            is_active=is_active
+        )
+        if error:
+            flash(error, "danger")
+            return render_template('admin/template_form.html', template=None, form_data=request.form)
+
+        flash(f"Email template '{template.name}' created successfully.", "success")
+        return redirect(url_for('admin.templates'))
+
+    return render_template('admin/template_form.html', template=None, form_data={'is_active': True, 'category': 'RECRUITMENT'})
+
+@admin_bp.route('/templates/<int:template_id>/edit', methods=['GET', 'POST'])
+def template_edit(template_id):
+    """Edit existing email template. Preserves event mappings."""
+    template = get_template_by_id(template_id)
+    if not template:
+        flash("Email template not found.", "warning")
+        return redirect(url_for('admin.templates'))
+
+    if request.method == 'POST':
+        name = request.form.get('name')
+        subject = request.form.get('subject')
+        body = request.form.get('body')
+        category = request.form.get('category')
+        is_active = bool(request.form.get('is_active'))
+
+        updated_t, error = update_email_template(
+            template_id=template.id,
+            name=name,
+            subject=subject,
+            body=body,
+            category=category,
+            is_active=is_active
+        )
+        if error:
+            flash(error, "danger")
+            return render_template('admin/template_form.html', template=template, form_data=request.form)
+
+        flash(f"Email template '{updated_t.name}' updated successfully.", "success")
+        return redirect(url_for('admin.templates'))
+
+    return render_template('admin/template_form.html', template=template, form_data=template.__dict__)
+
+@admin_bp.route('/templates/<int:template_id>/duplicate', methods=['POST'])
+def template_duplicate(template_id):
+    """Duplicates an existing template with a unique name."""
+    duplicate, error = duplicate_email_template(template_id)
+    if error:
+        flash(error, "danger")
+    else:
+        flash(f"Template duplicated successfully as '{duplicate.name}'.", "success")
+    return redirect(url_for('admin.templates'))
+
+@admin_bp.route('/templates/<int:template_id>/toggle', methods=['POST'])
+def template_toggle(template_id):
+    """Toggles active/inactive status."""
+    template, error = toggle_email_template_status(template_id)
+    if error:
+        flash(error, "danger")
+    else:
+        state = "activated" if template.is_active else "deactivated"
+        flash(f"Template '{template.name}' has been {state}.", "info")
+    return redirect(url_for('admin.templates'))
+
+@admin_bp.route('/templates/<int:template_id>/delete', methods=['POST'])
+def template_delete(template_id):
+    """Deletes template and safely detaches it from mappings."""
+    template = get_template_by_id(template_id)
+    name = template.name if template else "Template"
+    success, error = delete_email_template(template_id)
+    if error:
+        flash(error, "danger")
+    else:
+        flash(f"Email template '{name}' deleted successfully.", "info")
+    return redirect(url_for('admin.templates'))
+
+@admin_bp.route('/templates/<int:template_id>/preview')
+def template_preview(template_id):
+    """Preview rendered email template with mock candidate data."""
+    template = get_template_by_id(template_id)
+    if not template:
+        flash("Email template not found.", "warning")
+        return redirect(url_for('admin.templates'))
+
+    mock_context = {
+        'candidate_name': 'Alex Vance',
+        'application_id': 'AM-2026-APP-8842',
+        'job_title': 'Software Engineering Intern',
+        'company_name': 'Anti-Matrix'
+    }
+
+    rendered_subject = render_template_placeholders(template.subject, mock_context)
+    rendered_body = render_template_placeholders(template.body, mock_context)
+
+    return render_template(
+        'admin/template_preview.html',
+        template=template,
+        rendered_subject=rendered_subject,
+        rendered_body=rendered_body,
+        mock_context=mock_context
+    )
+
+@admin_bp.route('/templates/mappings/update', methods=['POST'])
+def event_mapping_update():
+    """Update event mapping configuration (template ID, delay minutes, automation toggle)."""
+    event_key = request.form.get('event_key')
+    template_id = request.form.get('template_id', type=int)
+    delay_minutes = request.form.get('delay_minutes', 0, type=int)
+    is_automated = bool(request.form.get('is_automated'))
+
+    mapping, error = update_event_mapping(
+        event_key=event_key,
+        template_id=template_id,
+        delay_minutes=delay_minutes,
+        is_automated=is_automated
+    )
+    if error:
+        flash(error, "danger")
+    else:
+        t_name = mapping.template.name if mapping.template else "Unassigned"
+        auto_str = "Automated" if mapping.is_automated else "Paused"
+        flash(f"Mapping for '{mapping.event_name}' updated: Template '{t_name}' ({mapping.delay_minutes}m delay, {auto_str}).", "success")
+
+    return redirect(url_for('admin.templates', tab='mappings'))
+
+@admin_bp.route('/templates/queue/process', methods=['POST'])
+def process_email_queue():
+    """Manually trigger dispatch of eligible scheduled email jobs."""
+    processed = process_pending_email_jobs()
+    flash(f"Dispatched {processed} scheduled email job(s) from queue.", "info")
+    return redirect(url_for('admin.templates', tab='queue'))

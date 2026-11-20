@@ -30,3 +30,20 @@ from .exam_service import (
     autosave_attempt_answer,
     submit_examination
 )
+from .email_template_service import (
+    seed_default_templates_and_mappings,
+    get_all_templates,
+    get_template_by_id,
+    create_email_template,
+    update_email_template,
+    duplicate_email_template,
+    toggle_email_template_status,
+    delete_email_template,
+    get_all_event_mappings,
+    update_event_mapping,
+    render_template_placeholders,
+    schedule_email_event,
+    get_email_queue_jobs,
+    process_pending_email_jobs,
+    get_email_dashboard_stats
+)

@@ -71,21 +71,29 @@
         </a>
       </li>
 
-      <!-- 8. Settings -->
+      <!-- 8. Email Templates -->
+      <li class="sidebar-item">
+        <a href="{{ url_for('admin.templates') }}" class="sidebar-link {% if 'template' in request.endpoint and 'question' not in request.endpoint %}active{% endif %}">
+          <i class="bi bi-envelope-paper-fill"></i>
+          <span>8. Templates</span>
+        </a>
+      </li>
+
+      <!-- 9. Settings -->
       <li class="sidebar-item">
         <a href="{{ url_for('admin.settings') }}" class="sidebar-link {% if request.endpoint == 'admin.settings' %}active{% endif %}">
           <i class="bi bi-gear-fill"></i>
-          <span>8. Settings</span>
+          <span>9. Settings</span>
         </a>
       </li>
 
       <li class="my-3 border-top border-secondary border-opacity-25"></li>
 
-      <!-- 9. Logout -->
+      <!-- 10. Logout -->
       <li class="sidebar-item">
         <a href="{{ url_for('auth.logout') }}" class="sidebar-link text-danger">
           <i class="bi bi-box-arrow-left"></i>
-          <span>9. Logout</span>
+          <span>10. Logout</span>
         </a>
       </li>
     </ul>

@@ -9,7 +9,7 @@ from flask_migrate import Migrate
 from config import config_by_name
 from models import db, User, Assessment, Question, Credential, Attempt, AttemptAnswer, Result, ProctoringEvent
 from routes import auth_bp, admin_bp, candidate_bp
-from services import create_initial_admin
+from services import create_initial_admin, seed_default_templates_and_mappings
 
 login_manager = LoginManager()
 csrf = CSRFProtect()
@@ -107,6 +107,8 @@ def create_app(config_name=None):
             user, created, raw_pwd = create_initial_admin()
             if created:
                 click.secho("Initial administrator account seeded from environment variables.", fg="cyan")
+            seed_default_templates_and_mappings()
+            click.secho("Default email templates verified / seeded.", fg="cyan")
 
     return app
 
@@ -116,4 +118,5 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
         create_initial_admin()
+        seed_default_templates_and_mappings()
     app.run(host='0.0.0.0', port=5000, debug=True)
