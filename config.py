@@ -5,24 +5,46 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+INSTANCE_DIR = os.path.join(BASE_DIR, 'instance')
+os.makedirs(INSTANCE_DIR, exist_ok=True)
+
+# Default local SQLite database file in instance/ directory
+DEFAULT_SQLITE_PATH = os.path.join(INSTANCE_DIR, 'anti_matrix.db')
+DEFAULT_SQLITE_URI = f"sqlite:///{DEFAULT_SQLITE_PATH.replace(os.sep, '/')}"
+
 class Config:
-    """Base configuration."""
+    """Base configuration with environment-driven database switching."""
     SECRET_KEY = os.environ.get('SECRET_KEY', 'anti-matrix-assessment-dev-secret-key-384918237')
     
-    # Database
-    db_url = os.environ.get('DATABASE_URL', 'postgresql://postgres:root@localhost:5432/anti_matrix_db')
-    if db_url and db_url.startswith('postgres://'):
-        db_url = db_url.replace('postgres://', 'postgresql://', 1)
+    # Environment-based database configuration:
+    # - Local development: defaults to SQLite3 inside instance/anti_matrix.db
+    # - VPS production: set DATABASE_URL (e.g. postgresql://user:pwd@host:5432/dbname)
+    raw_db_url = os.environ.get('DATABASE_URL')
+    if not raw_db_url:
+        db_url = DEFAULT_SQLITE_URI
+    elif raw_db_url.startswith('postgres://'):
+        # Fix legacy Heroku/host provider postgres:// schema prefix
+        db_url = raw_db_url.replace('postgres://', 'postgresql://', 1)
+    else:
+        db_url = raw_db_url
+        
     SQLALCHEMY_DATABASE_URI = db_url
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
-    # Engine options for PostgreSQL connection pooling
-    SQLALCHEMY_ENGINE_OPTIONS = {
-        'pool_pre_ping': True,
-        'pool_recycle': 300,
-        'pool_size': 10,
-        'max_overflow': 20,
-    }
+    # Engine options dynamic based on dialect (PostgreSQL vs SQLite)
+    if db_url.startswith('sqlite'):
+        SQLALCHEMY_ENGINE_OPTIONS = {
+            'pool_pre_ping': True,
+        }
+    else:
+        # PostgreSQL connection pooling options
+        SQLALCHEMY_ENGINE_OPTIONS = {
+            'pool_pre_ping': True,
+            'pool_recycle': 300,
+            'pool_size': 10,
+            'max_overflow': 20,
+        }
     
     # Security & Sessions
     WTF_CSRF_ENABLED = True
@@ -43,19 +65,27 @@ class DevelopmentConfig(Config):
     TESTING = False
 
 class TestingConfig(Config):
-    """Testing configuration with separate database."""
+    """Testing configuration with dedicated test database."""
     TESTING = True
     DEBUG = False
     WTF_CSRF_ENABLED = False
-    # Use test database or sqlite in-memory for unit testing if postgres test db not set
-    test_db = os.environ.get('TEST_DATABASE_URL', 'postgresql://postgres:root@localhost:5432/anti_matrix_db')
+    
+    default_test_sqlite = f"sqlite:///{os.path.join(INSTANCE_DIR, 'test_anti_matrix.db').replace(os.sep, '/')}"
+    test_db = os.environ.get('TEST_DATABASE_URL', default_test_sqlite)
     SQLALCHEMY_DATABASE_URI = test_db
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'pool_pre_ping': True,
+    }
 
 class ProductionConfig(Config):
     """Production configuration."""
     DEBUG = False
     TESTING = False
     SESSION_COOKIE_SECURE = True
+    
+    # In production, ensure DATABASE_URL is utilized
+    if not os.environ.get('DATABASE_URL'):
+        SQLALCHEMY_DATABASE_URI = DEFAULT_SQLITE_URI
 
 config_by_name = {
     'development': DevelopmentConfig,

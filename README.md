@@ -7,8 +7,10 @@ A professional, production-ready web application for Anti-Matrix's internal inte
 
 ## 1. Technology Stack
 
-- **Backend:** Python 3.12+, Flask 3.0.3
-- **Database:** PostgreSQL (with `psycopg2-binary` and connection pooling)
+- **Backend:** Python 3.12+, Flask 3.0.3 (Modular Architecture with Blueprints)
+- **Database Engine (Dual-Dialect Compatible):**
+  - **Local Development:** SQLite3 (stored at `instance/anti_matrix.db` with enforced foreign key constraints via `PRAGMA foreign_keys=ON;`)
+  - **VPS Production:** PostgreSQL (via `DATABASE_URL` with connection pooling)
 - **ORM & Migrations:** Flask-SQLAlchemy 3.1.1, Flask-Migrate 4.1.0, Alembic
 - **Authentication & Security:** Flask-Login 0.6.3, Werkzeug password hashing (scrypt / pbkdf2), Flask-WTF CSRF protection
 - **Frontend & UI:** HTML5, CSS3, JavaScript (ES6), Bootstrap 5.3, Bootstrap Icons 1.11, Custom Anti-Matrix Corporate Design System (White & Dark Navy/Black `#070b14`, `#0b0f19`, `#111827`, `#1e293b` with Orange Accent `#f97316`)
@@ -31,7 +33,7 @@ A professional, production-ready web application for Anti-Matrix's internal inte
 - **Secure Initial Admin Setup:** Created via CLI (`python -m flask create-admin`) or environment variables without hardcoded production credentials.
 
 ### B. Admin Dashboard
-- **Sidebar Navigation:**
+- **Sidebar Navigation (9 Sections):**
   1. Overview (`/admin/dashboard`)
   2. Assessment Manager (`/admin/assessments`)
   3. Question Bank (`/admin/questions`)
@@ -61,14 +63,13 @@ A professional, production-ready web application for Anti-Matrix's internal inte
   - Expiry Date (strictly 48 hours from creation)
   - Real-time Status: `ACTIVE`, `USED`, `EXPIRED`, `DISABLED`
 - **Strict 48-Hour Expiry:**
-  - Stored as PostgreSQL `TIMESTAMPTZ`.
-  - Expiry is strictly enforced on the server. If `now >= expires_at`, the candidate cannot start a test.
+  - Enforced strictly on the server. If `now >= expires_at`, the candidate cannot start a test.
 - **Single-Attempt Enforcement:**
-  - Strict PostgreSQL unique constraint (`uq_attempt_credential`) guarantees only one attempt per credential.
+  - Database unique constraint on `Attempt.credential_id` guarantees only one attempt per credential.
 - **Interruption Recovery:**
   - If a candidate experiences network failure or closes their browser, clicking "Resume Assessment" recovers their existing active attempt and saved answers.
 - **Confirmation Voucher Screen:**
-  - Displays generated User ID, one-time reveal of generated password, assessment duration, and full invitation template with single-click "Copy Credentials" and "Print Voucher" buttons.
+  - Displays generated User ID, one-time reveal of generated password, assessment duration, and full invitation template with single-click "Copy Invitation Message" and "Print Voucher" buttons.
 - **Explicit Password Regeneration:**
   - Candidate credentials can only be reset through an explicit administrator action with confirmation, restarting the 48-hour window.
 
@@ -87,7 +88,7 @@ A professional, production-ready web application for Anti-Matrix's internal inte
   - Live AJAX autosave of candidate answers.
   - Question navigation palette.
   - Submit confirmation modal.
-  - Transition of credential to `USED` upon submission.
+  - Automatic transition of credential to `USED` upon submission.
 
 ### E. Assessment Manager
 - Create, edit, and toggle active/inactive status of assessments.
@@ -99,7 +100,7 @@ A professional, production-ready web application for Anti-Matrix's internal inte
 ### F. Question Bank Interface
 - Upload structured JSON question files.
 - Documented and validated JSON schema.
-- Preview screen for staged questions before persisting to PostgreSQL.
+- Preview screen for staged questions before persisting to database.
 - Question listing with search and filter by assessment, category, and difficulty.
 - Question editing and deletion.
 - Downloadable valid JSON schema template (`antimatrix_question_template.json`).
@@ -111,13 +112,17 @@ A professional, production-ready web application for Anti-Matrix's internal inte
 ```
 anti_matrix_assessment/
 ├── app.py                     # Flask application factory, routes registration, CLI commands
-├── config.py                  # Environment configuration, database pooling, session settings
+├── config.py                  # Environment-driven database config (SQLite / PostgreSQL)
 ├── requirements.txt           # Python dependencies
 ├── .env.example               # Environment variables template
-├── .env                       # Local environment configuration
-├── models/                    # Modular SQLAlchemy models
+├── .env                       # Local environment configuration (git ignored)
+├── .gitignore                 # Excludes local databases, caches, and secrets
+├── instance/                  # Local instance directory
+│   ├── .gitkeep               # Preserves folder in git
+│   └── anti_matrix.db         # Local SQLite3 database (git ignored)
+├── models/                    # Modular SQLAlchemy models (Dual-dialect compatible)
 │   ├── __init__.py            # Model discovery and exports
-│   ├── database.py            # SQLAlchemy instance
+│   ├── database.py            # db instance & SQLite foreign key event listener
 │   ├── user.py                # User model (Admin & Candidate)
 │   ├── assessment.py          # Assessment model
 │   ├── question.py            # Question model (MCQs)
@@ -142,43 +147,16 @@ anti_matrix_assessment/
 │   ├── base.html              # Base layout (Bootstrap 5, Icons, Custom CSS)
 │   ├── auth/
 │   │   └── login.html         # Anti-Matrix branded login page
-│   ├── admin/
-│   │   ├── base_admin.html    # 9-section sidebar layout
-│   │   ├── dashboard.html     # Live metrics & recent activity feeds
-│   │   ├── assessment_manager.html
-│   │   ├── assessment_form.html
-│   │   ├── question_bank.html
-│   │   ├── question_preview.html
-│   │   ├── question_form.html
-│   │   ├── credential_manager.html
-│   │   ├── credential_create.html
-│   │   ├── credential_confirm.html # Confirmation voucher with copy buttons
-│   │   ├── candidate_manager.html
-│   │   ├── results.html
-│   │   ├── proctoring_logs.html
-│   │   └── settings.html
-│   ├── candidate/
-│   │   ├── base_candidate.html
-│   │   ├── dashboard.html     # Candidate portal & 48h countdown
-│   │   ├── exam_session.html  # Exam timer, autosave, question palette
-│   │   └── exam_result.html   # Scored submission summary
-│   └── errors/
-│       ├── 403.html           # Forbidden error page
-│       ├── 404.html           # Not found error page
-│       └── 500.html           # Server error page
+│   ├── admin/                 # 12 Admin section templates
+│   ├── candidate/             # 4 Candidate portal templates
+│   └── errors/                # 403, 404, 500 error pages
 ├── static/                    # Static assets
-│   ├── css/
-│   │   └── custom.css         # Anti-Matrix custom design system
-│   ├── js/
-│   │   ├── auth.js            # Password show/hide, form submission feedback
-│   │   ├── admin.js           # Clipboard copying, sidebar toggle
-│   │   └── candidate.js       # Live 48h countdown, server exam timer, autosave fetch
-│   └── images/
-│       └── logo.svg           # Anti-Matrix vector brand logo
-├── migrations/                # Alembic database migrations (PostgreSQL)
-├── instance/                  # Local runtime directory
+│   ├── css/custom.css         # Anti-Matrix custom design system
+│   ├── js/                    # auth.js, admin.js, candidate.js
+│   └── images/logo.svg        # Anti-Matrix vector brand logo
+├── migrations/                # Alembic database migrations
 ├── tests/                     # Comprehensive automated test suite
-│   ├── conftest.py            # Pytest fixtures and app context
+│   ├── conftest.py            # Pytest fixtures and testing app context
 │   ├── test_auth_and_roles.py # Admin/Candidate login, RBAC, 403 tests
 │   ├── test_credential_and_exam.py # 48h expiry, 1-attempt rule, resumption
 │   └── test_assessment_and_questions.py # Assessment validation (1-5), JSON parser, stats
@@ -187,15 +165,16 @@ anti_matrix_assessment/
 
 ---
 
-## 4. Installation & Setup Instructions
+## 4. Local Development Setup (SQLite3)
 
 ### Prerequisites
-- Python 3.12+
-- PostgreSQL 14+ (PostgreSQL 18 tested and verified)
+- Python 3.12+ (Virtual environment recommended)
+- Git
 
 ### Step 1: Clone / Navigate to Workspace
 ```bash
-cd c:\Users\Prave\Desktop\Assesment\INTERN---A
+git clone https://github.com/Antimatrix-in/INTERN---A.git
+cd INTERN---A
 ```
 
 ### Step 2: Install Dependencies
@@ -203,62 +182,100 @@ cd c:\Users\Prave\Desktop\Assesment\INTERN---A
 pip install -r requirements.txt
 ```
 
-### Step 3: Configure Environment Variables
+### Step 3: Configure Environment
 Copy `.env.example` to `.env`:
 ```bash
 copy .env.example .env
 ```
-Ensure your PostgreSQL database URL is configured in `.env`:
-```ini
-DATABASE_URL=postgresql://postgres:root@localhost:5432/anti_matrix_db
-SECRET_KEY=your-production-secret-key-here
-CREDENTIAL_EXPIRY_HOURS=48
-ADMIN_USERNAME=admin
-ADMIN_EMAIL=admin@antimatrix.local
-ADMIN_PASSWORD=AntiMatrix@2026!
-ADMIN_FULL_NAME="System Administrator"
+By default, the application runs on **SQLite3** stored locally at `instance/anti_matrix.db`. No PostgreSQL installation or setup is needed for local development.
+
+### Step 4: Initialize the Database & Seed Admin
+```bash
+python -m flask init-db
+```
+This command creates the tables in `instance/anti_matrix.db` with SQLite foreign keys enabled, and seeds the initial administrator account.
+
+*(Optional)* Seed a custom administrator directly:
+```bash
+python -m flask create-admin --username admin --email admin@antimatrix.local --password AntiMatrix@2026! --fullname "System Administrator"
 ```
 
-### Step 4: Database Initialization & Migrations
-Initialize database tables and run Alembic migrations:
+### Step 5: Start the Local Development Server
+```bash
+python app.py
+```
+Or via the Flask CLI:
+```bash
+python -m flask run --host=0.0.0.0 --port=5000
+```
+Open [http://localhost:5000](http://localhost:5000) in your browser:
+- **Admin Username:** `admin` (or `admin@antimatrix.local`)
+- **Admin Password:** `AntiMatrix@2026!`
+
+---
+
+## 5. Hostinger VPS Production Migration (PostgreSQL)
+
+When deploying this application to a Hostinger VPS with PostgreSQL, follow this standardized procedure:
+
+### Step 1: Provision PostgreSQL on Hostinger VPS
+1. In the VPS control panel or via SSH, install and start PostgreSQL:
+   ```bash
+   sudo apt update
+   sudo apt install -y postgresql postgresql-contrib libpq-dev
+   sudo systemctl start postgresql
+   sudo systemctl enable postgresql
+   ```
+2. Create the production database and user:
+   ```bash
+   sudo -u postgres psql -c "CREATE USER antimatrix_user WITH PASSWORD 'StrongProductionPasswordHere!';"
+   sudo -u postgres psql -c "CREATE DATABASE anti_matrix_db OWNER antimatrix_user;"
+   sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE anti_matrix_db TO antimatrix_user;"
+   ```
+
+### Step 2: Configure Environment on Hostinger VPS
+On the VPS, create the `.env` file and set the `DATABASE_URL` environment variable:
+```ini
+FLASK_ENV=production
+FLASK_DEBUG=0
+SECRET_KEY=generate-a-strong-random-hex-string-for-production
+DATABASE_URL=postgresql://antimatrix_user:StrongProductionPasswordHere!@localhost:5432/anti_matrix_db
+CREDENTIAL_EXPIRY_HOURS=48
+MAX_CONTENT_LENGTH=5242880
+ADMIN_USERNAME=admin
+ADMIN_EMAIL=admin@antimatrix.local
+ADMIN_PASSWORD=AntiMatrix@Production2026!
+ADMIN_FULL_NAME="Platform Administrator"
+```
+The application dynamically detects the `postgresql://` prefix and switches to PostgreSQL with connection pooling (`pool_size=10`, `max_overflow=20`, `pool_recycle=300`).
+
+### Step 3: Run Database Migrations on PostgreSQL
+Run Alembic migrations to apply the schema to the production PostgreSQL database:
 ```bash
 python -m flask db upgrade
 ```
 
-### Step 5: Create Initial Administrator Account
-Seed the initial admin account securely:
+### Step 4: Create the Production Administrator
 ```bash
 python -m flask create-admin
 ```
-*(Or specify custom credentials via CLI flags)*:
+
+### Step 5: (Optional) Migrate Existing Local Data
+To copy local data from `instance/anti_matrix.db` into PostgreSQL without resetting records, you can use `pgloader`:
 ```bash
-python -m flask create-admin --username admin --email admin@example.com --password YourSecurePassword123! --fullname "Lead Admin"
+pgloader ./instance/anti_matrix.db postgresql://antimatrix_user:StrongProductionPasswordHere!@localhost:5432/anti_matrix_db
 ```
 
----
-
-## 5. Running the Application
-
-Start the Flask server:
+### Step 6: Run with a Production WSGI Server (Gunicorn)
 ```bash
-python app.py
+gunicorn --workers 4 --bind 0.0.0.0:5000 app:app
 ```
-Or using the Flask CLI:
-```bash
-python -m flask run --host=0.0.0.0 --port=5000
-```
-
-Access the platform:
-- **URL:** [http://localhost:5000](http://localhost:5000)
-- **Initial Admin Credentials:**
-  - **Username:** `admin` (or `admin@antimatrix.local`)
-  - **Password:** `AntiMatrix@2026!`
 
 ---
 
 ## 6. Question Bank JSON Schema
 
-To import questions via JSON, upload an array of objects matching the documented schema below:
+To import questions via JSON in the Admin Question Bank, upload an array of objects matching the documented schema below:
 
 ```json
 [
@@ -271,7 +288,7 @@ To import questions via JSON, upload an array of objects matching the documented
       {"id": "D", "text": "O(n log n)"}
     ],
     "correct_option": "A",
-    "explanation": "Python dictionaries are implemented using hash tables, offering O(1) average lookup time.",
+    "explanation": "Python dictionaries use hash tables, offering O(1) average lookup time.",
     "points": 1.0,
     "difficulty": "EASY",
     "category": "Data Structures"

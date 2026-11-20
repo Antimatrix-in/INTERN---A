@@ -7,17 +7,26 @@ __pycache__/
 .coverage
 htmlcov/
 
-# Environments
+# Environments & Secrets
 .env
+.env.local
 venv/
 env/
 ENV/
 
-# Flask & Database
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+instance/*.db
+instance/*.sqlite
+instance/*.sqlite3
 instance/*
 !instance/.gitkeep
 
-# IDEs
+# IDEs & OS
 .vscode/
 .idea/
 *.swp
+.DS_Store
+Thumbs.db

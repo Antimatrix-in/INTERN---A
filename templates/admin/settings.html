@@ -70,18 +70,18 @@
       <div class="list-group list-group-flush bg-transparent">
         <div class="list-group-item bg-transparent text-white border-secondary d-flex justify-content-between align-items-center px-0">
           <div>
-            <div class="fw-semibold">Database Engine</div>
-            <small class="text-dim">Relational DBMS</small>
+            <div class="fw-semibold">Active Database</div>
+            <small class="text-dim">Environment-configured DBMS</small>
           </div>
-          <span class="badge bg-dark border border-secondary text-primary font-monospace">PostgreSQL 18</span>
+          <span class="badge bg-dark border border-secondary text-primary font-monospace">{{ active_db_name }}</span>
         </div>
 
         <div class="list-group-item bg-transparent text-white border-secondary d-flex justify-content-between align-items-center px-0">
           <div>
-            <div class="fw-semibold">Connection Pooling</div>
-            <small class="text-dim">SQLAlchemy pool_pre_ping with ping verification</small>
+            <div class="fw-semibold">Foreign Key Constraints</div>
+            <small class="text-dim">Relational integrity & cascade enforcement</small>
           </div>
-          <span class="badge bg-success-subtle text-success border border-success border-opacity-25">Active</span>
+          <span class="badge bg-success-subtle text-success border border-success border-opacity-25">Enforced (PRAGMA foreign_keys=ON)</span>
         </div>
 
         <div class="list-group-item bg-transparent text-white border-secondary d-flex justify-content-between align-items-center px-0">

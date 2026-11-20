@@ -6,12 +6,14 @@ from models import db, User, Assessment, Question
 
 @pytest.fixture
 def app():
-    os.environ['DATABASE_URL'] = 'postgresql://postgres:root@localhost:5432/anti_matrix_db'
+    # Use testing config (defaults to isolated SQLite test database)
     app = create_app('testing')
     app.config['WTF_CSRF_ENABLED'] = False
     
     with app.app_context():
+        db.create_all()
         yield app
+        db.session.remove()
 
 @pytest.fixture
 def client(app):

@@ -25,7 +25,7 @@ def create_app(config_name=None):
 
     # Initialize extensions
     db.init_app(app)
-    migrate.init_app(app, db)
+    migrate.init_app(app, db, render_as_batch=True)
     csrf.init_app(app)
 
     # Initialize Flask-Login
@@ -46,10 +46,13 @@ def create_app(config_name=None):
     # Global Template Context Processor
     @app.context_processor
     def inject_global_vars():
+        db_uri = app.config.get("SQLALCHEMY_DATABASE_URI", "")
+        db_name = "SQLite3 (Local)" if "sqlite" in db_uri else "PostgreSQL (Production)"
         return {
             'now_year': datetime.now(timezone.utc).year,
             'platform_name': 'ANTI-MATRIX',
-            'platform_version': '1.0.0 (Phase 1)'
+            'platform_version': '1.0.0 (Phase 1)',
+            'active_db_name': db_name
         }
 
     # Error Handlers
