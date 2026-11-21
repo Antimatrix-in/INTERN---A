@@ -1,0 +1,17 @@
+[Unit]
+Description=Anti-Matrix Online Assessment Platform
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=antimatrix
+Group=antimatrix
+WorkingDirectory=/var/www/anti-matrix-assessment
+EnvironmentFile=/var/www/anti-matrix-assessment/.env
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/var/www/anti-matrix-assessment/venv/bin/gunicorn --bind 127.0.0.1:8015 --workers 2 --timeout 120 app:app
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

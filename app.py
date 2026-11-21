@@ -10,6 +10,7 @@ from config import config_by_name
 from models import db, User, Assessment, Question, Credential, Attempt, AttemptAnswer, Result, ProctoringEvent
 from routes import auth_bp, admin_bp, candidate_bp
 from services import create_initial_admin, seed_default_templates_and_mappings
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 login_manager = LoginManager()
 csrf = CSRFProtect()
@@ -22,6 +23,9 @@ def create_app(config_name=None):
 
     app = Flask(__name__)
     app.config.from_object(config_by_name.get(config_name, config_by_name['default']))
+
+    # Enable Werkzeug ProxyFix to correctly handle reverse-proxy headers (Nginx SSL termination)
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 
     # Initialize extensions
     db.init_app(app)
@@ -119,6 +123,7 @@ def ensure_schema_columns(app):
         try:
             with db.engine.connect() as conn:
                 if db.engine.name == 'sqlite':
+                    # Credentials table
                     res = conn.execute(db.text("PRAGMA table_info(credentials)"))
                     existing = [r[1] for r in res.fetchall()]
                     if existing:
@@ -128,6 +133,14 @@ def ensure_schema_columns(app):
                             conn.execute(db.text("ALTER TABLE credentials ADD COLUMN email_sent_at DATETIME"))
                         if 'email_error' not in existing:
                             conn.execute(db.text("ALTER TABLE credentials ADD COLUMN email_error TEXT"))
+                        conn.commit()
+
+                    # Users table
+                    res_u = conn.execute(db.text("PRAGMA table_info(users)"))
+                    existing_u = [r[1] for r in res_u.fetchall()]
+                    if existing_u:
+                        if 'source_system' not in existing_u:
+                            conn.execute(db.text("ALTER TABLE users ADD COLUMN source_system VARCHAR(50) DEFAULT 'antimatrix_db'"))
                         conn.commit()
         except Exception:
             pass
