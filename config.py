@@ -18,9 +18,10 @@ class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY', 'anti-matrix-assessment-dev-secret-key-384918237')
     
     # Environment-based database configuration:
+    # - Assessment database (Primary): set ASSESSMENT_DATABASE_URL or DATABASE_URL
     # - Local development: defaults to SQLite3 inside instance/anti_matrix.db
-    # - VPS production: set DATABASE_URL (e.g. postgresql://user:pwd@host:5432/dbname)
-    raw_db_url = os.environ.get('DATABASE_URL')
+    # - VPS production: PostgreSQL anti_matrix_assessment_db
+    raw_db_url = os.environ.get('ASSESSMENT_DATABASE_URL') or os.environ.get('DATABASE_URL')
     if not raw_db_url:
         db_url = DEFAULT_SQLITE_URI
     elif raw_db_url.startswith('postgres://'):
@@ -31,6 +32,12 @@ class Config:
         
     SQLALCHEMY_DATABASE_URI = db_url
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+
+    # Source Anti-Matrix production database for Candidate Identity Lookup (Strict Read-Only)
+    raw_readonly_url = os.environ.get('ANTIMATRIX_READONLY_DATABASE_URL')
+    if raw_readonly_url and raw_readonly_url.startswith('postgres://'):
+        raw_readonly_url = raw_readonly_url.replace('postgres://', 'postgresql://', 1)
+    ANTIMATRIX_READONLY_DATABASE_URL = raw_readonly_url
     
     # Engine options dynamic based on dialect (PostgreSQL vs SQLite)
     if db_url.startswith('sqlite'):

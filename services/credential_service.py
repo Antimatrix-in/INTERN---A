@@ -8,6 +8,52 @@ from datetime import datetime, timezone, timedelta
 from sqlalchemy import or_
 from models import db, User, Credential, Assessment, EmailTemplate, ScheduledEmailJob
 from .email_template_service import render_template_placeholders
+from .candidate_lookup_service import lookup_candidate
+
+def find_or_sync_candidate_identity(candidate_info):
+    """
+    Syncs candidate identity snapshot from external authoritative database into assessment database.
+    Does not modify external database.
+    Returns local User model instance.
+    """
+    if not candidate_info:
+        return None
+    cid = candidate_info.get('candidate_id', '').strip()
+    cname = candidate_info.get('candidate_name', '').strip()
+    cemail = candidate_info.get('candidate_email', '').strip().lower()
+    source_sys = candidate_info.get('source_system', 'antimatrix_db')
+
+    # Look for existing user in assessment DB by user_id or email
+    user = User.query.filter(
+        (User.user_id == cid) |
+        (db.func.lower(User.user_id) == cid.lower()) |
+        (db.func.lower(User.email) == cemail)
+    ).first()
+
+    if not user:
+        user = User(
+            user_id=cid,
+            username=cid.lower(),
+            email=cemail,
+            full_name=cname,
+            role='CANDIDATE',
+            source_system=source_sys,
+            is_active=True
+        )
+        user.set_password(generate_secure_password())
+        db.session.add(user)
+        db.session.flush()
+    else:
+        # Update name and email to match authoritative source
+        user.full_name = cname
+        user.email = cemail
+        user.user_id = cid
+        user.role = 'CANDIDATE'
+        user.source_system = source_sys
+        user.is_active = True
+        db.session.flush()
+
+    return user
 
 def generate_candidate_user_id():
     """Generates a unique, professional candidate user ID e.g. AM-2026-X8K9M2."""
@@ -42,13 +88,22 @@ def generate_credential_key():
 
 def find_candidate_by_id(candidate_id):
     """
-    Generic lookup for existing Candidate by candidate ID (user_id), username, or email.
-    Case-insensitive where appropriate.
+    Find candidate by Candidate ID:
+    1. Queries the authoritative Anti-Matrix source database (strict read-only).
+       If found, syncs candidate identity reference into assessment database.
+    2. Fallback: checks local assessment database User records (e.g. if source DB is temporarily unreachable).
     Returns User object or None.
     """
     if not candidate_id:
         return None
     candidate_id = str(candidate_id).strip()
+
+    # Query authoritative source database
+    lookup_res = lookup_candidate(candidate_id)
+    if lookup_res.get("success") and lookup_res.get("candidate"):
+        return find_or_sync_candidate_identity(lookup_res["candidate"])
+
+    # Fallback to local assessment DB records (e.g. offline fallback / existing snapshot)
     return User.query.filter(
         (User.user_id == candidate_id) |
         (db.func.lower(User.user_id) == candidate_id.lower()) |

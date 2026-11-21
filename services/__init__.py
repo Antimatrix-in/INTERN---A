@@ -1,4 +1,10 @@
 from .auth_service import admin_required, candidate_required, create_initial_admin
+from .candidate_lookup_service import (
+    lookup_candidate,
+    register_test_candidate,
+    clear_test_candidates,
+    verify_read_only_protection
+)
 from .credential_service import (
     create_candidate_credential,
     regenerate_candidate_credential,
@@ -7,6 +13,7 @@ from .credential_service import (
     generate_candidate_user_id,
     generate_secure_password,
     find_candidate_by_id,
+    find_or_sync_candidate_identity,
     send_credential_email
 )
 from .assessment_service import (

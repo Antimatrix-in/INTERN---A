@@ -14,6 +14,7 @@ class User(UserMixin, db.Model):
     role = db.Column(db.String(20), nullable=False, default='CANDIDATE', index=True) # 'ADMIN' or 'CANDIDATE'
     full_name = db.Column(db.String(120), nullable=False)
     is_active = db.Column(db.Boolean, default=True, nullable=False)
+    source_system = db.Column(db.String(50), default='antimatrix_db', nullable=True)
     created_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     last_login = db.Column(db.DateTime(timezone=True), nullable=True)
 

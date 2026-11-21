@@ -13,6 +13,8 @@ from services import (
     toggle_credential_status,
     get_all_credentials,
     find_candidate_by_id,
+    find_or_sync_candidate_identity,
+    lookup_candidate,
     send_credential_email,
     get_sample_json_template,
     parse_and_validate_question_json,
@@ -605,25 +607,52 @@ def credentials():
 def candidate_lookup():
     """
     Search and fetch candidate details by generic Candidate ID.
-    Accepts candidate ID (user_id), username, or email from existing database.
+    Queries the authoritative Anti-Matrix production database in strict read-only mode.
     """
     candidate_id = request.args.get('candidate_id', '').strip()
     if not candidate_id:
         return jsonify({"success": False, "message": "Candidate ID is required."}), 400
 
-    cand = find_candidate_by_id(candidate_id)
-    if not cand:
-        return jsonify({"success": False, "message": "Candidate not found. Please check the Candidate ID."}), 404
+    lookup_res = lookup_candidate(candidate_id)
+    if not lookup_res.get("success"):
+        # Fallback check if already synced locally (e.g. offline fallback)
+        local_cand = User.query.filter(
+            (User.user_id == candidate_id) |
+            (db.func.lower(User.user_id) == candidate_id.lower())
+        ).filter_by(role='CANDIDATE').first()
+        if not local_cand:
+            return jsonify({
+                "success": False,
+                "message": lookup_res.get("message", "Candidate not found. Please verify the Candidate ID.")
+            }), lookup_res.get("status_code", 404)
+        cand_user = local_cand
+        cand_id_str = local_cand.user_id
+        cand_name_str = local_cand.full_name
+        cand_email_str = local_cand.email
+        cand_status_str = "ACTIVE"
+        cand_source_str = local_cand.source_system or "assessment_db"
+    else:
+        cand_data = lookup_res["candidate"]
+        cand_user = find_or_sync_candidate_identity(cand_data)
+        db.session.commit()
+        cand_id_str = cand_data["candidate_id"]
+        cand_name_str = cand_data["candidate_name"]
+        cand_email_str = cand_data["candidate_email"]
+        cand_status_str = cand_data.get("status", "ACTIVE")
+        cand_source_str = cand_data.get("source_system", "antimatrix_db")
 
-    active_cred = cand.credential if (cand.credential and cand.credential.effective_status == 'ACTIVE') else None
+    active_cred = cand_user.credential if (cand_user.credential and cand_user.credential.effective_status == 'ACTIVE') else None
 
     return jsonify({
         "success": True,
         "candidate": {
-            "id": cand.id,
-            "user_id": cand.user_id,
-            "full_name": cand.full_name,
-            "email": cand.email
+            "id": cand_user.id,
+            "user_id": cand_id_str,
+            "candidate_id": cand_id_str,
+            "full_name": cand_name_str,
+            "email": cand_email_str,
+            "status": cand_status_str,
+            "source_system": cand_source_str
         },
         "has_active_credential": bool(active_cred),
         "active_assessment_id": active_cred.assessment_id if active_cred else None,
@@ -797,6 +826,7 @@ def credential_send_email(credential_id):
         return jsonify({
             "success": success,
             "message": message,
+            "recipient": cred.candidate.email if cred and cred.candidate else None,
             "email_status": cred.email_status if cred else "FAILED",
             "email_sent_at": sent_at_str
         }), status_code
